@@ -1,0 +1,30 @@
+# Netlify Configuration for Finova Workspace
+# This file configures how Netlify builds and deploys your Next.js app
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+# Enable Next.js plugin for optimal support
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Function configuration
+[functions]
+  node_bundler = "esbuild"
+  # API routes are automatically converted to Netlify Functions
+
+# Redirect configuration for Next.js routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"

@@ -1,0 +1,98 @@
+schemaname,tablename,policyname,cmd,qual,with_check
+public,activity_logs,ceo_can_view_all_activity_logs,SELECT,"(EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = (auth.uid())::text) AND (users.role = 'CEO'::text))))",null
+public,activity_logs,clevel_can_view_non_ceo_activity_logs,SELECT,"((EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = (auth.uid())::text) AND (users.role = 'C_LEVEL'::text)))) AND (user_role <> 'CEO'::text))",null
+public,activity_logs,service_can_insert_activity_logs,INSERT,null,true
+public,activity_logs,users_can_view_own_activity_logs,SELECT,(user_id = (auth.uid())::text),null
+public,announcements,Announcements readable by all,SELECT,true,null
+public,announcements,Authenticated users can create announcements,INSERT,null,(auth.uid() IS NOT NULL)
+public,announcements,Authenticated users can delete announcements,DELETE,(auth.uid() IS NOT NULL),null
+public,announcements,Authenticated users can read announcements,SELECT,(auth.uid() IS NOT NULL),null
+public,announcements,Authenticated users can update announcements,UPDATE,(auth.uid() IS NOT NULL),null
+public,calendar_events,Users can create own events,INSERT,null,((auth.uid())::text = organizer_id)
+public,calendar_events,Users can delete own events,DELETE,((auth.uid())::text = organizer_id),null
+public,calendar_events,Users can read all events,SELECT,true,null
+public,calendar_events,Users can update own events,UPDATE,((auth.uid())::text = organizer_id),((auth.uid())::text = organizer_id)
+public,chat_groups,Authenticated users can create groups,INSERT,null,((auth.uid())::text = created_by)
+public,chat_groups,Authenticated users can read groups,SELECT,(auth.uid() IS NOT NULL),null
+public,chat_groups,Group creators can delete groups,DELETE,((auth.uid())::text = created_by),null
+public,chat_groups,Group creators can update groups,UPDATE,((auth.uid())::text = created_by),null
+public,chat_messages,Authenticated users can send messages,INSERT,null,((auth.uid())::text = sender_id)
+public,chat_messages,Users can delete their messages,DELETE,((auth.uid())::text = sender_id),null
+public,chat_messages,Users can read their messages,SELECT,(((auth.uid())::text = sender_id) OR ((auth.uid())::text = recipient_id) OR (group_id IS NOT NULL)),null
+public,chat_messages,Users can update their messages,UPDATE,((auth.uid())::text = sender_id),null
+public,chat_messages,Users see their chat messages,SELECT,"(((auth.uid())::text = sender_id) OR ((auth.uid())::text = recipient_id) OR ((group_id IS NOT NULL) AND ((auth.uid())::text IN ( SELECT unnest(chat_groups.members) AS unnest
+   FROM chat_groups
+  WHERE ((chat_groups.id)::text = chat_messages.group_id)))))",null
+public,departments,Authenticated users can create departments,INSERT,null,(auth.uid() IS NOT NULL)
+public,departments,Authenticated users can delete departments,DELETE,(auth.uid() IS NOT NULL),null
+public,departments,Authenticated users can read departments,SELECT,(auth.uid() IS NOT NULL),null
+public,departments,Authenticated users can update departments,UPDATE,(auth.uid() IS NOT NULL),null
+public,files,Users can delete own files,DELETE,(uploaded_by = (auth.jwt() ->> 'sub'::text)),null
+public,files,Users can update own files,UPDATE,(uploaded_by = (auth.jwt() ->> 'sub'::text)),null
+public,files,Users can upload files,INSERT,null,(uploaded_by = (auth.jwt() ->> 'sub'::text))
+public,files,Users can view files shared with them,SELECT,((uploaded_by = ANY (shared_with)) OR ((auth.jwt() ->> 'sub'::text) = ANY (shared_with))),null
+public,files,Users can view own uploaded files,SELECT,(uploaded_by = (auth.jwt() ->> 'sub'::text)),null
+public,files_department_shares,CEO and C_LEVEL can view all department files,SELECT,"(EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text])))))",null
+public,files_department_shares,Department heads can view their department files,SELECT,"(EXISTS ( SELECT 1
+   FROM (departments d
+     JOIN users u ON ((u.uid = current_setting('app.current_user_id'::text, true))))
+  WHERE ((d.id = files_department_shares.department_id) AND (d.head_id = u.uid))))",null
+public,files_department_shares,Department members can view their department files,SELECT,"(EXISTS ( SELECT 1
+   FROM users u
+  WHERE ((u.uid = current_setting('app.current_user_id'::text, true)) AND (u.department = ( SELECT departments.name
+           FROM departments
+          WHERE (departments.id = files_department_shares.department_id))))))",null
+public,files_department_shares,Only CEO and C_LEVEL can delete department shares,DELETE,"(EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text])))))",null
+public,files_department_shares,Only CEO and C_LEVEL can share files to departments,INSERT,null,"(EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text])))))"
+public,files_department_shares,Only CEO and C_LEVEL can update department shares,UPDATE,"(EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text])))))",null
+public,notifications,Authenticated users can create any notification,INSERT,null,true
+public,notifications,Users can delete own notifications,DELETE,((auth.uid())::text = user_id),null
+public,notifications,Users can read own notifications,SELECT,((auth.uid())::text = user_id),null
+public,notifications,Users can update own notifications,UPDATE,((auth.uid())::text = user_id),((auth.uid())::text = user_id)
+public,projects,Authenticated users can create projects,INSERT,null,(auth.uid() IS NOT NULL)
+public,projects,Authenticated users can delete projects,DELETE,(auth.uid() IS NOT NULL),null
+public,projects,Authenticated users can read projects,SELECT,(auth.uid() IS NOT NULL),null
+public,projects,Authenticated users can update projects,UPDATE,(auth.uid() IS NOT NULL),null
+public,projects,Projects readable by all,SELECT,true,null
+public,task_milestones,Task assignees can manage milestones,ALL,"(EXISTS ( SELECT 1
+   FROM (tasks t
+     LEFT JOIN users u ON ((u.uid = current_setting('app.current_user_id'::text, true))))
+  WHERE ((t.id = task_milestones.task_id) AND ((u.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text, 'LEAD'::text])) OR (t.created_by = u.uid) OR (u.uid = ANY (t.assignee_ids))))))",null
+public,task_milestones,Users can view milestones for accessible tasks,SELECT,"(EXISTS ( SELECT 1
+   FROM (tasks t
+     LEFT JOIN users u ON ((u.uid = current_setting('app.current_user_id'::text, true))))
+  WHERE ((t.id = task_milestones.task_id) AND ((u.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text, 'LEAD'::text])) OR (t.created_by = u.uid) OR (u.uid = ANY (t.assignee_ids)) OR (u.uid = ANY (t.viewer_ids))))))",null
+public,tasks,Authenticated users can create tasks,INSERT,null,(auth.uid() IS NOT NULL)
+public,tasks,Authenticated users can delete tasks,DELETE,(auth.uid() IS NOT NULL),null
+public,tasks,Authenticated users can read tasks,SELECT,(auth.uid() IS NOT NULL),null
+public,tasks,Authenticated users can update tasks,UPDATE,(auth.uid() IS NOT NULL),null
+public,tasks,Tasks readable by all,SELECT,true,null
+public,teams,Authenticated users can create teams,INSERT,null,(auth.uid() IS NOT NULL)
+public,teams,Authenticated users can delete teams,DELETE,(auth.uid() IS NOT NULL),null
+public,teams,Authenticated users can read teams,SELECT,(auth.uid() IS NOT NULL),null
+public,teams,Authenticated users can update teams,UPDATE,(auth.uid() IS NOT NULL),null
+public,time_tracking,Authenticated users can read time tracking,SELECT,(auth.uid() IS NOT NULL),null
+public,time_tracking,Users can create own time entries,INSERT,null,((auth.uid())::text = user_id)
+public,time_tracking,Users can delete own time entries,DELETE,((auth.uid())::text = user_id),null
+public,time_tracking,Users can update own time entries,UPDATE,((auth.uid())::text = user_id),null
+public,users,Authenticated users can read users,SELECT,(auth.uid() IS NOT NULL),null
+public,users,Users can delete own profile,DELETE,((auth.uid())::text = uid),null
+public,users,Users can insert own profile,INSERT,null,((auth.uid())::text = uid)
+public,users,Users can read all users,SELECT,true,null
+public,users,Users can update own profile,UPDATE,((auth.uid())::text = uid),null
+public,warnings,Authenticated users can create warnings,INSERT,null,(auth.uid() IS NOT NULL)
+public,warnings,Authenticated users can delete warnings,DELETE,(auth.uid() IS NOT NULL),null
+public,warnings,Authenticated users can read warnings,SELECT,(auth.uid() IS NOT NULL),null
+public,warnings,Authenticated users can update warnings,UPDATE,(auth.uid() IS NOT NULL),null

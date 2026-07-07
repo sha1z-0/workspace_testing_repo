@@ -1,0 +1,6 @@
+# PM2 Logs Directory
+# This directory stores PM2 application logs
+
+*.log
+
+# Keep the directory but ignore log files

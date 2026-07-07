@@ -1,0 +1,1074 @@
+Tier 1:
+
+1st:
+| table_name              | column_name            | data_type                | is_nullable | column_default     |
+| ----------------------- | ---------------------- | ------------------------ | ----------- | ------------------ |
+| activity_logs           | id                     | uuid                     | NO          | uuid_generate_v4() |
+| activity_logs           | user_id                | text                     | NO          | null               |
+| activity_logs           | user_name              | text                     | NO          | null               |
+| activity_logs           | user_email             | text                     | NO          | null               |
+| activity_logs           | user_role              | text                     | NO          | null               |
+| activity_logs           | action                 | text                     | NO          | null               |
+| activity_logs           | ip_address             | text                     | YES         | null               |
+| activity_logs           | user_agent             | text                     | YES         | null               |
+| activity_logs           | created_at             | timestamp with time zone | YES         | now()              |
+| announcements           | id                     | uuid                     | NO          | uuid_generate_v4() |
+| announcements           | title                  | text                     | NO          | null               |
+| announcements           | content                | text                     | NO          | null               |
+| announcements           | priority               | text                     | NO          | null               |
+| announcements           | author_id              | text                     | NO          | null               |
+| announcements           | author_name            | text                     | NO          | null               |
+| announcements           | read_by                | ARRAY                    | YES         | ARRAY[]::text[]    |
+| announcements           | created_at             | timestamp with time zone | YES         | now()              |
+| announcements           | updated_at             | timestamp with time zone | YES         | now()              |
+| calendar_events         | id                     | uuid                     | NO          | uuid_generate_v4() |
+| calendar_events         | title                  | text                     | NO          | null               |
+| calendar_events         | description            | text                     | YES         | null               |
+| calendar_events         | start_time             | timestamp with time zone | NO          | null               |
+| calendar_events         | end_time               | timestamp with time zone | NO          | null               |
+| calendar_events         | location               | text                     | YES         | null               |
+| calendar_events         | event_type             | text                     | NO          | null               |
+| calendar_events         | organizer_id           | text                     | NO          | null               |
+| calendar_events         | organizer_name         | text                     | YES         | null               |
+| calendar_events         | organizer_email        | text                     | YES         | null               |
+| calendar_events         | attendees              | ARRAY                    | YES         | null               |
+| calendar_events         | invited_member_ids     | ARRAY                    | YES         | null               |
+| calendar_events         | send_calendar_invite   | boolean                  | YES         | false              |
+| calendar_events         | send_email_reminder    | boolean                  | YES         | false              |
+| calendar_events         | add_to_google_calendar | boolean                  | YES         | false              |
+| calendar_events         | notify_on_dashboard    | boolean                  | YES         | true               |
+| calendar_events         | created_at             | timestamp with time zone | YES         | now()              |
+| calendar_events         | updated_at             | timestamp with time zone | YES         | now()              |
+| chat_groups             | id                     | uuid                     | NO          | uuid_generate_v4() |
+| chat_groups             | name                   | text                     | NO          | null               |
+| chat_groups             | description            | text                     | YES         | null               |
+| chat_groups             | members                | ARRAY                    | YES         | ARRAY[]::text[]    |
+| chat_groups             | created_by             | text                     | NO          | null               |
+| chat_groups             | avatar                 | text                     | YES         | null               |
+| chat_groups             | created_at             | timestamp with time zone | YES         | now()              |
+| chat_groups             | updated_at             | timestamp with time zone | YES         | now()              |
+| chat_messages           | id                     | uuid                     | NO          | uuid_generate_v4() |
+| chat_messages           | text                   | text                     | NO          | null               |
+| chat_messages           | sender_id              | text                     | NO          | null               |
+| chat_messages           | sender_name            | text                     | YES         | null               |
+| chat_messages           | sender_avatar          | text                     | YES         | null               |
+| chat_messages           | recipient_id           | text                     | YES         | null               |
+| chat_messages           | group_id               | text                     | YES         | null               |
+| chat_messages           | is_read                | boolean                  | YES         | false              |
+| chat_messages           | created_at             | timestamp with time zone | YES         | now()              |
+| departments             | id                     | uuid                     | NO          | uuid_generate_v4() |
+| departments             | name                   | text                     | NO          | null               |
+| departments             | description            | text                     | YES         | null               |
+| departments             | head_id                | text                     | YES         | null               |
+| departments             | head_name              | text                     | YES         | null               |
+| departments             | member_count           | integer                  | YES         | 0                  |
+| departments             | created_at             | timestamp with time zone | YES         | now()              |
+| departments             | updated_at             | timestamp with time zone | YES         | now()              |
+| files                   | id                     | uuid                     | NO          | uuid_generate_v4() |
+| files                   | name                   | text                     | NO          | null               |
+| files                   | description            | text                     | YES         | null               |
+| files                   | storage_path           | text                     | NO          | null               |
+| files                   | file_type              | text                     | YES         | null               |
+| files                   | file_size              | bigint                   | YES         | null               |
+| files                   | uploaded_by            | text                     | NO          | null               |
+| files                   | uploaded_by_name       | text                     | NO          | null               |
+| files                   | shared_with            | ARRAY                    | YES         | ARRAY[]::text[]    |
+| files                   | created_at             | timestamp with time zone | YES         | now()              |
+| files                   | updated_at             | timestamp with time zone | YES         | now()              |
+| files                   | project_id             | uuid                     | YES         | null               |
+| files                   | project_name           | text                     | YES         | null               |
+| files                   | department_id          | uuid                     | YES         | null               |
+| files                   | department_name        | text                     | YES         | null               |
+| files_department_shares | id                     | uuid                     | NO          | uuid_generate_v4() |
+| files_department_shares | file_id                | text                     | NO          | null               |
+| files_department_shares | file_name              | text                     | NO          | null               |
+| files_department_shares | file_path              | text                     | NO          | null               |
+| files_department_shares | department_id          | uuid                     | NO          | null               |
+| files_department_shares | uploaded_by            | text                     | NO          | null               |
+| files_department_shares | uploaded_by_name       | text                     | NO          | null               |
+| files_department_shares | description            | text                     | YES         | null               |
+| files_department_shares | created_at             | timestamp with time zone | YES         | now()              |
+| files_department_shares | updated_at             | timestamp with time zone | YES         | now()              |
+| files_department_shares | project_id             | uuid                     | YES         | null               |
+| files_department_shares | project_name           | text                     | YES         | null               |
+| notifications           | id                     | uuid                     | NO          | uuid_generate_v4() |
+| notifications           | user_id                | text                     | NO          | null               |
+| notifications           | type                   | text                     | NO          | null               |
+| notifications           | title                  | text                     | NO          | null               |
+| notifications           | body                   | text                     | NO          | null               |
+| notifications           | link_to                | text                     | YES         | null               |
+| notifications           | related_item_id        | text                     | YES         | null               |
+| notifications           | read                   | boolean                  | YES         | false              |
+| notifications           | created_at             | timestamp with time zone | YES         | now()              |
+| notifications           | updated_at             | timestamp with time zone | YES         | now()              |
+| projects                | id                     | uuid                     | NO          | uuid_generate_v4() |
+| projects                | name                   | text                     | NO          | null               |
+
+2nd:
+| schemaname | tablename               | policyname                                          | permissive | roles           | cmd    | qual                                                                                                                                                                                                                                                                                                                                            | with_check                                                                                                                                                                 |
+| ---------- | ----------------------- | --------------------------------------------------- | ---------- | --------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| public     | users                   | Users can read all users                            | PERMISSIVE | {public}        | SELECT | true                                                                                                                                                                                                                                                                                                                                            | null                                                                                                                                                                       |
+| public     | users                   | Users can update own profile                        | PERMISSIVE | {public}        | UPDATE | ((auth.uid())::text = uid)                                                                                                                                                                                                                                                                                                                      | null                                                                                                                                                                       |
+| public     | projects                | Projects readable by all                            | PERMISSIVE | {public}        | SELECT | true                                                                                                                                                                                                                                                                                                                                            | null                                                                                                                                                                       |
+| public     | tasks                   | Tasks readable by all                               | PERMISSIVE | {public}        | SELECT | true                                                                                                                                                                                                                                                                                                                                            | null                                                                                                                                                                       |
+| public     | announcements           | Announcements readable by all                       | PERMISSIVE | {public}        | SELECT | true                                                                                                                                                                                                                                                                                                                                            | null                                                                                                                                                                       |
+| public     | chat_messages           | Users see their chat messages                       | PERMISSIVE | {public}        | SELECT | (((auth.uid())::text = sender_id) OR ((auth.uid())::text = recipient_id) OR ((group_id IS NOT NULL) AND ((auth.uid())::text IN ( SELECT unnest(chat_groups.members) AS unnest
+   FROM chat_groups
+  WHERE ((chat_groups.id)::text = chat_messages.group_id)))))                                                                                 | null                                                                                                                                                                       |
+| public     | users                   | Users can insert own profile                        | PERMISSIVE | {public}        | INSERT | null                                                                                                                                                                                                                                                                                                                                            | ((auth.uid())::text = uid)                                                                                                                                                 |
+| public     | users                   | Users can delete own profile                        | PERMISSIVE | {public}        | DELETE | ((auth.uid())::text = uid)                                                                                                                                                                                                                                                                                                                      | null                                                                                                                                                                       |
+| public     | projects                | Authenticated users can create projects             | PERMISSIVE | {public}        | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (auth.uid() IS NOT NULL)                                                                                                                                                   |
+| public     | projects                | Authenticated users can update projects             | PERMISSIVE | {public}        | UPDATE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | projects                | Authenticated users can delete projects             | PERMISSIVE | {public}        | DELETE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | tasks                   | Authenticated users can create tasks                | PERMISSIVE | {public}        | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (auth.uid() IS NOT NULL)                                                                                                                                                   |
+| public     | tasks                   | Authenticated users can update tasks                | PERMISSIVE | {public}        | UPDATE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | tasks                   | Authenticated users can delete tasks                | PERMISSIVE | {public}        | DELETE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | announcements           | Authenticated users can create announcements        | PERMISSIVE | {public}        | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (auth.uid() IS NOT NULL)                                                                                                                                                   |
+| public     | announcements           | Authenticated users can update announcements        | PERMISSIVE | {public}        | UPDATE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | announcements           | Authenticated users can delete announcements        | PERMISSIVE | {public}        | DELETE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | chat_messages           | Authenticated users can send messages               | PERMISSIVE | {public}        | INSERT | null                                                                                                                                                                                                                                                                                                                                            | ((auth.uid())::text = sender_id)                                                                                                                                           |
+| public     | chat_messages           | Users can update their messages                     | PERMISSIVE | {public}        | UPDATE | ((auth.uid())::text = sender_id)                                                                                                                                                                                                                                                                                                                | null                                                                                                                                                                       |
+| public     | chat_messages           | Users can delete their messages                     | PERMISSIVE | {public}        | DELETE | ((auth.uid())::text = sender_id)                                                                                                                                                                                                                                                                                                                | null                                                                                                                                                                       |
+| public     | chat_groups             | Authenticated users can read groups                 | PERMISSIVE | {public}        | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | chat_groups             | Authenticated users can create groups               | PERMISSIVE | {public}        | INSERT | null                                                                                                                                                                                                                                                                                                                                            | ((auth.uid())::text = created_by)                                                                                                                                          |
+| public     | chat_groups             | Group creators can update groups                    | PERMISSIVE | {public}        | UPDATE | ((auth.uid())::text = created_by)                                                                                                                                                                                                                                                                                                               | null                                                                                                                                                                       |
+| public     | chat_groups             | Group creators can delete groups                    | PERMISSIVE | {public}        | DELETE | ((auth.uid())::text = created_by)                                                                                                                                                                                                                                                                                                               | null                                                                                                                                                                       |
+| public     | warnings                | Authenticated users can read warnings               | PERMISSIVE | {public}        | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | warnings                | Authenticated users can create warnings             | PERMISSIVE | {public}        | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (auth.uid() IS NOT NULL)                                                                                                                                                   |
+| public     | warnings                | Authenticated users can update warnings             | PERMISSIVE | {public}        | UPDATE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | warnings                | Authenticated users can delete warnings             | PERMISSIVE | {public}        | DELETE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | time_tracking           | Authenticated users can read time tracking          | PERMISSIVE | {public}        | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | time_tracking           | Users can create own time entries                   | PERMISSIVE | {public}        | INSERT | null                                                                                                                                                                                                                                                                                                                                            | ((auth.uid())::text = user_id)                                                                                                                                             |
+| public     | time_tracking           | Users can update own time entries                   | PERMISSIVE | {public}        | UPDATE | ((auth.uid())::text = user_id)                                                                                                                                                                                                                                                                                                                  | null                                                                                                                                                                       |
+| public     | time_tracking           | Users can delete own time entries                   | PERMISSIVE | {public}        | DELETE | ((auth.uid())::text = user_id)                                                                                                                                                                                                                                                                                                                  | null                                                                                                                                                                       |
+| public     | departments             | Authenticated users can create departments          | PERMISSIVE | {public}        | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (auth.uid() IS NOT NULL)                                                                                                                                                   |
+| public     | departments             | Authenticated users can update departments          | PERMISSIVE | {public}        | UPDATE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | departments             | Authenticated users can delete departments          | PERMISSIVE | {public}        | DELETE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | teams                   | Authenticated users can create teams                | PERMISSIVE | {public}        | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (auth.uid() IS NOT NULL)                                                                                                                                                   |
+| public     | teams                   | Authenticated users can update teams                | PERMISSIVE | {public}        | UPDATE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | teams                   | Authenticated users can delete teams                | PERMISSIVE | {public}        | DELETE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | users                   | Authenticated users can read users                  | PERMISSIVE | {public}        | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | projects                | Authenticated users can read projects               | PERMISSIVE | {public}        | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | tasks                   | Authenticated users can read tasks                  | PERMISSIVE | {public}        | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | announcements           | Authenticated users can read announcements          | PERMISSIVE | {public}        | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | chat_messages           | Users can read their messages                       | PERMISSIVE | {public}        | SELECT | (((auth.uid())::text = sender_id) OR ((auth.uid())::text = recipient_id) OR (group_id IS NOT NULL))                                                                                                                                                                                                                                             | null                                                                                                                                                                       |
+| public     | departments             | Authenticated users can read departments            | PERMISSIVE | {public}        | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | teams                   | Authenticated users can read teams                  | PERMISSIVE | {public}        | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | calendar_events         | Users can read all events                           | PERMISSIVE | {authenticated} | SELECT | true                                                                                                                                                                                                                                                                                                                                            | null                                                                                                                                                                       |
+| public     | calendar_events         | Users can create own events                         | PERMISSIVE | {authenticated} | INSERT | null                                                                                                                                                                                                                                                                                                                                            | ((auth.uid())::text = organizer_id)                                                                                                                                        |
+| public     | calendar_events         | Users can update own events                         | PERMISSIVE | {authenticated} | UPDATE | ((auth.uid())::text = organizer_id)                                                                                                                                                                                                                                                                                                             | ((auth.uid())::text = organizer_id)                                                                                                                                        |
+| public     | calendar_events         | Users can delete own events                         | PERMISSIVE | {authenticated} | DELETE | ((auth.uid())::text = organizer_id)                                                                                                                                                                                                                                                                                                             | null                                                                                                                                                                       |
+| public     | notifications           | Authenticated users can create any notification     | PERMISSIVE | {authenticated} | INSERT | null                                                                                                                                                                                                                                                                                                                                            | true                                                                                                                                                                       |
+| public     | notifications           | Users can read own notifications                    | PERMISSIVE | {authenticated} | SELECT | ((auth.uid())::text = user_id)                                                                                                                                                                                                                                                                                                                  | null                                                                                                                                                                       |
+| public     | notifications           | Users can update own notifications                  | PERMISSIVE | {authenticated} | UPDATE | ((auth.uid())::text = user_id)                                                                                                                                                                                                                                                                                                                  | ((auth.uid())::text = user_id)                                                                                                                                             |
+| public     | notifications           | Users can delete own notifications                  | PERMISSIVE | {authenticated} | DELETE | ((auth.uid())::text = user_id)                                                                                                                                                                                                                                                                                                                  | null                                                                                                                                                                       |
+| public     | task_milestones         | Users can view milestones for accessible tasks      | PERMISSIVE | {public}        | SELECT | (EXISTS ( SELECT 1
+   FROM (tasks t
+     LEFT JOIN users u ON ((u.uid = current_setting('app.current_user_id'::text, true))))
+  WHERE ((t.id = task_milestones.task_id) AND ((u.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text, 'LEAD'::text])) OR (t.created_by = u.uid) OR (u.uid = ANY (t.assignee_ids)) OR (u.uid = ANY (t.viewer_ids)))))) | null                                                                                                                                                                       |
+| public     | task_milestones         | Task assignees can manage milestones                | PERMISSIVE | {public}        | ALL    | (EXISTS ( SELECT 1
+   FROM (tasks t
+     LEFT JOIN users u ON ((u.uid = current_setting('app.current_user_id'::text, true))))
+  WHERE ((t.id = task_milestones.task_id) AND ((u.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text, 'LEAD'::text])) OR (t.created_by = u.uid) OR (u.uid = ANY (t.assignee_ids))))))                                 | null                                                                                                                                                                       |
+| public     | activity_logs           | ceo_can_view_all_activity_logs                      | PERMISSIVE | {public}        | SELECT | (EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = (auth.uid())::text) AND (users.role = 'CEO'::text))))                                                                                                                                                                                                                                    | null                                                                                                                                                                       |
+| public     | activity_logs           | clevel_can_view_non_ceo_activity_logs               | PERMISSIVE | {public}        | SELECT | ((EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = (auth.uid())::text) AND (users.role = 'C_LEVEL'::text)))) AND (user_role <> 'CEO'::text))                                                                                                                                                                                               | null                                                                                                                                                                       |
+| public     | activity_logs           | users_can_view_own_activity_logs                    | PERMISSIVE | {public}        | SELECT | (user_id = (auth.uid())::text)                                                                                                                                                                                                                                                                                                                  | null                                                                                                                                                                       |
+| public     | activity_logs           | service_can_insert_activity_logs                    | PERMISSIVE | {public}        | INSERT | null                                                                                                                                                                                                                                                                                                                                            | true                                                                                                                                                                       |
+| public     | files                   | Users can view own uploaded files                   | PERMISSIVE | {public}        | SELECT | (uploaded_by = (auth.jwt() ->> 'sub'::text))                                                                                                                                                                                                                                                                                                    | null                                                                                                                                                                       |
+| public     | files                   | Users can view files shared with them               | PERMISSIVE | {public}        | SELECT | ((uploaded_by = ANY (shared_with)) OR ((auth.jwt() ->> 'sub'::text) = ANY (shared_with)))                                                                                                                                                                                                                                                       | null                                                                                                                                                                       |
+| public     | files                   | Users can upload files                              | PERMISSIVE | {public}        | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (uploaded_by = (auth.jwt() ->> 'sub'::text))                                                                                                                               |
+| public     | files                   | Users can update own files                          | PERMISSIVE | {public}        | UPDATE | (uploaded_by = (auth.jwt() ->> 'sub'::text))                                                                                                                                                                                                                                                                                                    | null                                                                                                                                                                       |
+| public     | files                   | Users can delete own files                          | PERMISSIVE | {public}        | DELETE | (uploaded_by = (auth.jwt() ->> 'sub'::text))                                                                                                                                                                                                                                                                                                    | null                                                                                                                                                                       |
+| public     | files_department_shares | CEO and C_LEVEL can view all department files       | PERMISSIVE | {public}        | SELECT | (EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text])))))                                                                                                                                                                      | null                                                                                                                                                                       |
+| public     | files_department_shares | Department heads can view their department files    | PERMISSIVE | {public}        | SELECT | (EXISTS ( SELECT 1
+   FROM (departments d
+     JOIN users u ON ((u.uid = current_setting('app.current_user_id'::text, true))))
+  WHERE ((d.id = files_department_shares.department_id) AND (d.head_id = u.uid))))                                                                                                                               | null                                                                                                                                                                       |
+| public     | files_department_shares | Department members can view their department files  | PERMISSIVE | {public}        | SELECT | (EXISTS ( SELECT 1
+   FROM users u
+  WHERE ((u.uid = current_setting('app.current_user_id'::text, true)) AND (u.department = ( SELECT departments.name
+           FROM departments
+          WHERE (departments.id = files_department_shares.department_id))))))                                                                                | null                                                                                                                                                                       |
+| public     | files_department_shares | Only CEO and C_LEVEL can share files to departments | PERMISSIVE | {public}        | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text]))))) |
+| public     | files_department_shares | Only CEO and C_LEVEL can update department shares   | PERMISSIVE | {public}        | UPDATE | (EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text])))))                                                                                                                                                                      | null                                                                                                                                                                       |
+| public     | files_department_shares | Only CEO and C_LEVEL can delete department shares   | PERMISSIVE | {public}        | DELETE | (EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text])))))                                                                                                                                                                      | null                                                                                                                                                                       |
+
+3rd:
+| schema | function_name                | arguments                                                 | return_type |
+| ------ | ---------------------------- | --------------------------------------------------------- | ----------- |
+| public | calculate_milestone_progress | p_task_id uuid                                            | integer     |
+| public | is_user_assigned_to_task     | task_assignees text[], user_uid text                      | boolean     |
+| public | is_user_assigned_to_task     | task_assignees text[], task_viewers text[], user_uid text | boolean     |
+| public | update_task_milestone_count  |                                                           | trigger     |
+| public | update_user_last_active      |                                                           | trigger     |
+calculate_milestone_progress:
+| pg_get_functiondef                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CREATE OR REPLACE FUNCTION public.calculate_milestone_progress(p_task_id uuid)
+ RETURNS integer
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+  total_milestones INTEGER;
+  completed_milestones INTEGER;
+  progress INTEGER;
+BEGIN
+  SELECT COUNT(*) INTO total_milestones
+  FROM task_milestones
+  WHERE task_id = p_task_id;
+  
+  IF total_milestones = 0 THEN
+    RETURN 0;
+  END IF;
+  
+  SELECT COUNT(*) INTO completed_milestones
+  FROM task_milestones
+  WHERE task_id = p_task_id AND status = 'completed';
+  
+  progress := ROUND((completed_milestones::DECIMAL / total_milestones::DECIMAL) * 100);
+  
+  RETURN progress;
+END;
+$function$
+ |
+
+is_user_assigned_to_task:
+| pg_get_functiondef                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CREATE OR REPLACE FUNCTION public.is_user_assigned_to_task(task_assignees text[], user_uid text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ IMMUTABLE
+AS $function$
+BEGIN
+  RETURN user_uid = ANY(task_assignees);
+END;
+$function$
+                                                      |
+| CREATE OR REPLACE FUNCTION public.is_user_assigned_to_task(task_assignees text[], task_viewers text[], user_uid text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ IMMUTABLE
+AS $function$
+BEGIN
+  RETURN user_uid = ANY(task_assignees) OR user_uid = ANY(task_viewers);
+END;
+$function$
+ |
+
+update_task_milestone_count:
+| pg_get_functiondef                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CREATE OR REPLACE FUNCTION public.update_task_milestone_count()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  UPDATE tasks
+  SET milestone_count = (
+    SELECT COUNT(*) 
+    FROM task_milestones 
+    WHERE task_id = COALESCE(NEW.task_id, OLD.task_id)
+  )
+  WHERE id = COALESCE(NEW.task_id, OLD.task_id);
+  
+  RETURN COALESCE(NEW, OLD);
+END;
+$function$
+ |
+
+update_user_last_active:
+| pg_get_functiondef                                                                                                                                                                                                                      |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CREATE OR REPLACE FUNCTION public.update_user_last_active()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  UPDATE users 
+  SET last_active = NEW.created_at 
+  WHERE uid = NEW.user_id;
+  RETURN NEW;
+END;
+$function$
+ |
+
+4th:
+| event_object_table | trigger_name                   | event_manipulation | action_statement                               | action_timing |
+| ------------------ | ------------------------------ | ------------------ | ---------------------------------------------- | ------------- |
+| task_milestones    | trigger_update_milestone_count | INSERT             | EXECUTE FUNCTION update_task_milestone_count() | AFTER         |
+| task_milestones    | trigger_update_milestone_count | DELETE             | EXECUTE FUNCTION update_task_milestone_count() | AFTER         |
+| activity_logs      | update_last_active_on_login    | INSERT             | EXECUTE FUNCTION update_user_last_active()     | AFTER         |
+
+
+
+
+
+
+
+
+
+
+RLS POLICIESSS:
+
+| schemaname | tablename               | policyname                                          | cmd    | qual                                                                                                                                                                                                                                                                                                                                            | with_check                                                                                                                                                                 |
+| ---------- | ----------------------- | --------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| public     | activity_logs           | ceo_can_view_all_activity_logs                      | SELECT | (EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = (auth.uid())::text) AND (users.role = 'CEO'::text))))                                                                                                                                                                                                                                    | null                                                                                                                                                                       |
+| public     | activity_logs           | clevel_can_view_non_ceo_activity_logs               | SELECT | ((EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = (auth.uid())::text) AND (users.role = 'C_LEVEL'::text)))) AND (user_role <> 'CEO'::text))                                                                                                                                                                                               | null                                                                                                                                                                       |
+| public     | activity_logs           | service_can_insert_activity_logs                    | INSERT | null                                                                                                                                                                                                                                                                                                                                            | true                                                                                                                                                                       |
+| public     | activity_logs           | users_can_view_own_activity_logs                    | SELECT | (user_id = (auth.uid())::text)                                                                                                                                                                                                                                                                                                                  | null                                                                                                                                                                       |
+| public     | announcements           | Announcements readable by all                       | SELECT | true                                                                                                                                                                                                                                                                                                                                            | null                                                                                                                                                                       |
+| public     | announcements           | Authenticated users can create announcements        | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (auth.uid() IS NOT NULL)                                                                                                                                                   |
+| public     | announcements           | Authenticated users can delete announcements        | DELETE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | announcements           | Authenticated users can read announcements          | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | announcements           | Authenticated users can update announcements        | UPDATE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | calendar_events         | Users can create own events                         | INSERT | null                                                                                                                                                                                                                                                                                                                                            | ((auth.uid())::text = organizer_id)                                                                                                                                        |
+| public     | calendar_events         | Users can delete own events                         | DELETE | ((auth.uid())::text = organizer_id)                                                                                                                                                                                                                                                                                                             | null                                                                                                                                                                       |
+| public     | calendar_events         | Users can read all events                           | SELECT | true                                                                                                                                                                                                                                                                                                                                            | null                                                                                                                                                                       |
+| public     | calendar_events         | Users can update own events                         | UPDATE | ((auth.uid())::text = organizer_id)                                                                                                                                                                                                                                                                                                             | ((auth.uid())::text = organizer_id)                                                                                                                                        |
+| public     | chat_groups             | Authenticated users can create groups               | INSERT | null                                                                                                                                                                                                                                                                                                                                            | ((auth.uid())::text = created_by)                                                                                                                                          |
+| public     | chat_groups             | Authenticated users can read groups                 | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | chat_groups             | Group creators can delete groups                    | DELETE | ((auth.uid())::text = created_by)                                                                                                                                                                                                                                                                                                               | null                                                                                                                                                                       |
+| public     | chat_groups             | Group creators can update groups                    | UPDATE | ((auth.uid())::text = created_by)                                                                                                                                                                                                                                                                                                               | null                                                                                                                                                                       |
+| public     | chat_messages           | Authenticated users can send messages               | INSERT | null                                                                                                                                                                                                                                                                                                                                            | ((auth.uid())::text = sender_id)                                                                                                                                           |
+| public     | chat_messages           | Users can delete their messages                     | DELETE | ((auth.uid())::text = sender_id)                                                                                                                                                                                                                                                                                                                | null                                                                                                                                                                       |
+| public     | chat_messages           | Users can read their messages                       | SELECT | (((auth.uid())::text = sender_id) OR ((auth.uid())::text = recipient_id) OR (group_id IS NOT NULL))                                                                                                                                                                                                                                             | null                                                                                                                                                                       |
+| public     | chat_messages           | Users can update their messages                     | UPDATE | ((auth.uid())::text = sender_id)                                                                                                                                                                                                                                                                                                                | null                                                                                                                                                                       |
+| public     | chat_messages           | Users see their chat messages                       | SELECT | (((auth.uid())::text = sender_id) OR ((auth.uid())::text = recipient_id) OR ((group_id IS NOT NULL) AND ((auth.uid())::text IN ( SELECT unnest(chat_groups.members) AS unnest
+   FROM chat_groups
+  WHERE ((chat_groups.id)::text = chat_messages.group_id)))))                                                                                 | null                                                                                                                                                                       |
+| public     | departments             | Authenticated users can create departments          | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (auth.uid() IS NOT NULL)                                                                                                                                                   |
+| public     | departments             | Authenticated users can delete departments          | DELETE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | departments             | Authenticated users can read departments            | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | departments             | Authenticated users can update departments          | UPDATE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | files                   | Users can delete own files                          | DELETE | (uploaded_by = (auth.jwt() ->> 'sub'::text))                                                                                                                                                                                                                                                                                                    | null                                                                                                                                                                       |
+| public     | files                   | Users can update own files                          | UPDATE | (uploaded_by = (auth.jwt() ->> 'sub'::text))                                                                                                                                                                                                                                                                                                    | null                                                                                                                                                                       |
+| public     | files                   | Users can upload files                              | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (uploaded_by = (auth.jwt() ->> 'sub'::text))                                                                                                                               |
+| public     | files                   | Users can view files shared with them               | SELECT | ((uploaded_by = ANY (shared_with)) OR ((auth.jwt() ->> 'sub'::text) = ANY (shared_with)))                                                                                                                                                                                                                                                       | null                                                                                                                                                                       |
+| public     | files                   | Users can view own uploaded files                   | SELECT | (uploaded_by = (auth.jwt() ->> 'sub'::text))                                                                                                                                                                                                                                                                                                    | null                                                                                                                                                                       |
+| public     | files_department_shares | CEO and C_LEVEL can view all department files       | SELECT | (EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text])))))                                                                                                                                                                      | null                                                                                                                                                                       |
+| public     | files_department_shares | Department heads can view their department files    | SELECT | (EXISTS ( SELECT 1
+   FROM (departments d
+     JOIN users u ON ((u.uid = current_setting('app.current_user_id'::text, true))))
+  WHERE ((d.id = files_department_shares.department_id) AND (d.head_id = u.uid))))                                                                                                                               | null                                                                                                                                                                       |
+| public     | files_department_shares | Department members can view their department files  | SELECT | (EXISTS ( SELECT 1
+   FROM users u
+  WHERE ((u.uid = current_setting('app.current_user_id'::text, true)) AND (u.department = ( SELECT departments.name
+           FROM departments
+          WHERE (departments.id = files_department_shares.department_id))))))                                                                                | null                                                                                                                                                                       |
+| public     | files_department_shares | Only CEO and C_LEVEL can delete department shares   | DELETE | (EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text])))))                                                                                                                                                                      | null                                                                                                                                                                       |
+| public     | files_department_shares | Only CEO and C_LEVEL can share files to departments | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text]))))) |
+| public     | files_department_shares | Only CEO and C_LEVEL can update department shares   | UPDATE | (EXISTS ( SELECT 1
+   FROM users
+  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text])))))                                                                                                                                                                      | null                                                                                                                                                                       |
+| public     | notifications           | Authenticated users can create any notification     | INSERT | null                                                                                                                                                                                                                                                                                                                                            | true                                                                                                                                                                       |
+| public     | notifications           | Users can delete own notifications                  | DELETE | ((auth.uid())::text = user_id)                                                                                                                                                                                                                                                                                                                  | null                                                                                                                                                                       |
+| public     | notifications           | Users can read own notifications                    | SELECT | ((auth.uid())::text = user_id)                                                                                                                                                                                                                                                                                                                  | null                                                                                                                                                                       |
+| public     | notifications           | Users can update own notifications                  | UPDATE | ((auth.uid())::text = user_id)                                                                                                                                                                                                                                                                                                                  | ((auth.uid())::text = user_id)                                                                                                                                             |
+| public     | projects                | Authenticated users can create projects             | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (auth.uid() IS NOT NULL)                                                                                                                                                   |
+| public     | projects                | Authenticated users can delete projects             | DELETE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | projects                | Authenticated users can read projects               | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | projects                | Authenticated users can update projects             | UPDATE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | projects                | Projects readable by all                            | SELECT | true                                                                                                                                                                                                                                                                                                                                            | null                                                                                                                                                                       |
+| public     | task_milestones         | Task assignees can manage milestones                | ALL    | (EXISTS ( SELECT 1
+   FROM (tasks t
+     LEFT JOIN users u ON ((u.uid = current_setting('app.current_user_id'::text, true))))
+  WHERE ((t.id = task_milestones.task_id) AND ((u.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text, 'LEAD'::text])) OR (t.created_by = u.uid) OR (u.uid = ANY (t.assignee_ids))))))                                 | null                                                                                                                                                                       |
+| public     | task_milestones         | Users can view milestones for accessible tasks      | SELECT | (EXISTS ( SELECT 1
+   FROM (tasks t
+     LEFT JOIN users u ON ((u.uid = current_setting('app.current_user_id'::text, true))))
+  WHERE ((t.id = task_milestones.task_id) AND ((u.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text, 'LEAD'::text])) OR (t.created_by = u.uid) OR (u.uid = ANY (t.assignee_ids)) OR (u.uid = ANY (t.viewer_ids)))))) | null                                                                                                                                                                       |
+| public     | tasks                   | Authenticated users can create tasks                | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (auth.uid() IS NOT NULL)                                                                                                                                                   |
+| public     | tasks                   | Authenticated users can delete tasks                | DELETE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | tasks                   | Authenticated users can read tasks                  | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | tasks                   | Authenticated users can update tasks                | UPDATE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | tasks                   | Tasks readable by all                               | SELECT | true                                                                                                                                                                                                                                                                                                                                            | null                                                                                                                                                                       |
+| public     | teams                   | Authenticated users can create teams                | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (auth.uid() IS NOT NULL)                                                                                                                                                   |
+| public     | teams                   | Authenticated users can delete teams                | DELETE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | teams                   | Authenticated users can read teams                  | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | teams                   | Authenticated users can update teams                | UPDATE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | time_tracking           | Authenticated users can read time tracking          | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | time_tracking           | Users can create own time entries                   | INSERT | null                                                                                                                                                                                                                                                                                                                                            | ((auth.uid())::text = user_id)                                                                                                                                             |
+| public     | time_tracking           | Users can delete own time entries                   | DELETE | ((auth.uid())::text = user_id)                                                                                                                                                                                                                                                                                                                  | null                                                                                                                                                                       |
+| public     | time_tracking           | Users can update own time entries                   | UPDATE | ((auth.uid())::text = user_id)                                                                                                                                                                                                                                                                                                                  | null                                                                                                                                                                       |
+| public     | users                   | Authenticated users can read users                  | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | users                   | Users can delete own profile                        | DELETE | ((auth.uid())::text = uid)                                                                                                                                                                                                                                                                                                                      | null                                                                                                                                                                       |
+| public     | users                   | Users can insert own profile                        | INSERT | null                                                                                                                                                                                                                                                                                                                                            | ((auth.uid())::text = uid)                                                                                                                                                 |
+| public     | users                   | Users can read all users                            | SELECT | true                                                                                                                                                                                                                                                                                                                                            | null                                                                                                                                                                       |
+| public     | users                   | Users can update own profile                        | UPDATE | ((auth.uid())::text = uid)                                                                                                                                                                                                                                                                                                                      | null                                                                                                                                                                       |
+| public     | warnings                | Authenticated users can create warnings             | INSERT | null                                                                                                                                                                                                                                                                                                                                            | (auth.uid() IS NOT NULL)                                                                                                                                                   |
+| public     | warnings                | Authenticated users can delete warnings             | DELETE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | warnings                | Authenticated users can read warnings               | SELECT | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+| public     | warnings                | Authenticated users can update warnings             | UPDATE | (auth.uid() IS NOT NULL)                                                                                                                                                                                                                                                                                                                        | null                                                                                                                                                                       |
+
+JSONNN:
+
+[
+  {
+    "schemaname": "public",
+    "tablename": "activity_logs",
+    "policyname": "ceo_can_view_all_activity_logs",
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.uid = (auth.uid())::text) AND (users.role = 'CEO'::text))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "activity_logs",
+    "policyname": "clevel_can_view_non_ceo_activity_logs",
+    "cmd": "SELECT",
+    "qual": "((EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.uid = (auth.uid())::text) AND (users.role = 'C_LEVEL'::text)))) AND (user_role <> 'CEO'::text))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "activity_logs",
+    "policyname": "service_can_insert_activity_logs",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "true"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "activity_logs",
+    "policyname": "users_can_view_own_activity_logs",
+    "cmd": "SELECT",
+    "qual": "(user_id = (auth.uid())::text)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "announcements",
+    "policyname": "Announcements readable by all",
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "announcements",
+    "policyname": "Authenticated users can create announcements",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(auth.uid() IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "announcements",
+    "policyname": "Authenticated users can delete announcements",
+    "cmd": "DELETE",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "announcements",
+    "policyname": "Authenticated users can read announcements",
+    "cmd": "SELECT",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "announcements",
+    "policyname": "Authenticated users can update announcements",
+    "cmd": "UPDATE",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_events",
+    "policyname": "Users can create own events",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((auth.uid())::text = organizer_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_events",
+    "policyname": "Users can delete own events",
+    "cmd": "DELETE",
+    "qual": "((auth.uid())::text = organizer_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_events",
+    "policyname": "Users can read all events",
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "calendar_events",
+    "policyname": "Users can update own events",
+    "cmd": "UPDATE",
+    "qual": "((auth.uid())::text = organizer_id)",
+    "with_check": "((auth.uid())::text = organizer_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "chat_groups",
+    "policyname": "Authenticated users can create groups",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((auth.uid())::text = created_by)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "chat_groups",
+    "policyname": "Authenticated users can read groups",
+    "cmd": "SELECT",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "chat_groups",
+    "policyname": "Group creators can delete groups",
+    "cmd": "DELETE",
+    "qual": "((auth.uid())::text = created_by)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "chat_groups",
+    "policyname": "Group creators can update groups",
+    "cmd": "UPDATE",
+    "qual": "((auth.uid())::text = created_by)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "chat_messages",
+    "policyname": "Authenticated users can send messages",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((auth.uid())::text = sender_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "chat_messages",
+    "policyname": "Users can delete their messages",
+    "cmd": "DELETE",
+    "qual": "((auth.uid())::text = sender_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "chat_messages",
+    "policyname": "Users can read their messages",
+    "cmd": "SELECT",
+    "qual": "(((auth.uid())::text = sender_id) OR ((auth.uid())::text = recipient_id) OR (group_id IS NOT NULL))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "chat_messages",
+    "policyname": "Users can update their messages",
+    "cmd": "UPDATE",
+    "qual": "((auth.uid())::text = sender_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "chat_messages",
+    "policyname": "Users see their chat messages",
+    "cmd": "SELECT",
+    "qual": "(((auth.uid())::text = sender_id) OR ((auth.uid())::text = recipient_id) OR ((group_id IS NOT NULL) AND ((auth.uid())::text IN ( SELECT unnest(chat_groups.members) AS unnest\n   FROM chat_groups\n  WHERE ((chat_groups.id)::text = chat_messages.group_id)))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "departments",
+    "policyname": "Authenticated users can create departments",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(auth.uid() IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "departments",
+    "policyname": "Authenticated users can delete departments",
+    "cmd": "DELETE",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "departments",
+    "policyname": "Authenticated users can read departments",
+    "cmd": "SELECT",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "departments",
+    "policyname": "Authenticated users can update departments",
+    "cmd": "UPDATE",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "files",
+    "policyname": "Users can delete own files",
+    "cmd": "DELETE",
+    "qual": "(uploaded_by = (auth.jwt() ->> 'sub'::text))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "files",
+    "policyname": "Users can update own files",
+    "cmd": "UPDATE",
+    "qual": "(uploaded_by = (auth.jwt() ->> 'sub'::text))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "files",
+    "policyname": "Users can upload files",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(uploaded_by = (auth.jwt() ->> 'sub'::text))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "files",
+    "policyname": "Users can view files shared with them",
+    "cmd": "SELECT",
+    "qual": "((uploaded_by = ANY (shared_with)) OR ((auth.jwt() ->> 'sub'::text) = ANY (shared_with)))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "files",
+    "policyname": "Users can view own uploaded files",
+    "cmd": "SELECT",
+    "qual": "(uploaded_by = (auth.jwt() ->> 'sub'::text))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "files_department_shares",
+    "policyname": "CEO and C_LEVEL can view all department files",
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text])))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "files_department_shares",
+    "policyname": "Department heads can view their department files",
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM (departments d\n     JOIN users u ON ((u.uid = current_setting('app.current_user_id'::text, true))))\n  WHERE ((d.id = files_department_shares.department_id) AND (d.head_id = u.uid))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "files_department_shares",
+    "policyname": "Department members can view their department files",
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.uid = current_setting('app.current_user_id'::text, true)) AND (u.department = ( SELECT departments.name\n           FROM departments\n          WHERE (departments.id = files_department_shares.department_id))))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "files_department_shares",
+    "policyname": "Only CEO and C_LEVEL can delete department shares",
+    "cmd": "DELETE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text])))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "files_department_shares",
+    "policyname": "Only CEO and C_LEVEL can share files to departments",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text])))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "files_department_shares",
+    "policyname": "Only CEO and C_LEVEL can update department shares",
+    "cmd": "UPDATE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM users\n  WHERE ((users.uid = current_setting('app.current_user_id'::text, true)) AND (users.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text])))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notifications",
+    "policyname": "Authenticated users can create any notification",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "true"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notifications",
+    "policyname": "Users can delete own notifications",
+    "cmd": "DELETE",
+    "qual": "((auth.uid())::text = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notifications",
+    "policyname": "Users can read own notifications",
+    "cmd": "SELECT",
+    "qual": "((auth.uid())::text = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "notifications",
+    "policyname": "Users can update own notifications",
+    "cmd": "UPDATE",
+    "qual": "((auth.uid())::text = user_id)",
+    "with_check": "((auth.uid())::text = user_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "projects",
+    "policyname": "Authenticated users can create projects",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(auth.uid() IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "projects",
+    "policyname": "Authenticated users can delete projects",
+    "cmd": "DELETE",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "projects",
+    "policyname": "Authenticated users can read projects",
+    "cmd": "SELECT",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "projects",
+    "policyname": "Authenticated users can update projects",
+    "cmd": "UPDATE",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "projects",
+    "policyname": "Projects readable by all",
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "task_milestones",
+    "policyname": "Task assignees can manage milestones",
+    "cmd": "ALL",
+    "qual": "(EXISTS ( SELECT 1\n   FROM (tasks t\n     LEFT JOIN users u ON ((u.uid = current_setting('app.current_user_id'::text, true))))\n  WHERE ((t.id = task_milestones.task_id) AND ((u.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text, 'LEAD'::text])) OR (t.created_by = u.uid) OR (u.uid = ANY (t.assignee_ids))))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "task_milestones",
+    "policyname": "Users can view milestones for accessible tasks",
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM (tasks t\n     LEFT JOIN users u ON ((u.uid = current_setting('app.current_user_id'::text, true))))\n  WHERE ((t.id = task_milestones.task_id) AND ((u.role = ANY (ARRAY['CEO'::text, 'C_LEVEL'::text, 'LEAD'::text])) OR (t.created_by = u.uid) OR (u.uid = ANY (t.assignee_ids)) OR (u.uid = ANY (t.viewer_ids))))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "tasks",
+    "policyname": "Authenticated users can create tasks",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(auth.uid() IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "tasks",
+    "policyname": "Authenticated users can delete tasks",
+    "cmd": "DELETE",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "tasks",
+    "policyname": "Authenticated users can read tasks",
+    "cmd": "SELECT",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "tasks",
+    "policyname": "Authenticated users can update tasks",
+    "cmd": "UPDATE",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "tasks",
+    "policyname": "Tasks readable by all",
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "teams",
+    "policyname": "Authenticated users can create teams",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(auth.uid() IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "teams",
+    "policyname": "Authenticated users can delete teams",
+    "cmd": "DELETE",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "teams",
+    "policyname": "Authenticated users can read teams",
+    "cmd": "SELECT",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "teams",
+    "policyname": "Authenticated users can update teams",
+    "cmd": "UPDATE",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "time_tracking",
+    "policyname": "Authenticated users can read time tracking",
+    "cmd": "SELECT",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "time_tracking",
+    "policyname": "Users can create own time entries",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((auth.uid())::text = user_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "time_tracking",
+    "policyname": "Users can delete own time entries",
+    "cmd": "DELETE",
+    "qual": "((auth.uid())::text = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "time_tracking",
+    "policyname": "Users can update own time entries",
+    "cmd": "UPDATE",
+    "qual": "((auth.uid())::text = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "users",
+    "policyname": "Authenticated users can read users",
+    "cmd": "SELECT",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "users",
+    "policyname": "Users can delete own profile",
+    "cmd": "DELETE",
+    "qual": "((auth.uid())::text = uid)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "users",
+    "policyname": "Users can insert own profile",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((auth.uid())::text = uid)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "users",
+    "policyname": "Users can read all users",
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "users",
+    "policyname": "Users can update own profile",
+    "cmd": "UPDATE",
+    "qual": "((auth.uid())::text = uid)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "warnings",
+    "policyname": "Authenticated users can create warnings",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(auth.uid() IS NOT NULL)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "warnings",
+    "policyname": "Authenticated users can delete warnings",
+    "cmd": "DELETE",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "warnings",
+    "policyname": "Authenticated users can read warnings",
+    "cmd": "SELECT",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "warnings",
+    "policyname": "Authenticated users can update warnings",
+    "cmd": "UPDATE",
+    "qual": "(auth.uid() IS NOT NULL)",
+    "with_check": null
+  }
+]
+
+
+FUNCTIONSSSS:
+
+| routine_name                 | routine_definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| update_task_milestone_count  | 
+BEGIN
+  UPDATE tasks
+  SET milestone_count = (
+    SELECT COUNT(*) 
+    FROM task_milestones 
+    WHERE task_id = COALESCE(NEW.task_id, OLD.task_id)
+  )
+  WHERE id = COALESCE(NEW.task_id, OLD.task_id);
+  
+  RETURN COALESCE(NEW, OLD);
+END;
+                                                                                                                                                                                                                                                                  |
+| calculate_milestone_progress | 
+DECLARE
+  total_milestones INTEGER;
+  completed_milestones INTEGER;
+  progress INTEGER;
+BEGIN
+  SELECT COUNT(*) INTO total_milestones
+  FROM task_milestones
+  WHERE task_id = p_task_id;
+  
+  IF total_milestones = 0 THEN
+    RETURN 0;
+  END IF;
+  
+  SELECT COUNT(*) INTO completed_milestones
+  FROM task_milestones
+  WHERE task_id = p_task_id AND status = 'completed';
+  
+  progress := ROUND((completed_milestones::DECIMAL / total_milestones::DECIMAL) * 100);
+  
+  RETURN progress;
+END;
+ |
+| update_user_last_active      | 
+BEGIN
+  UPDATE users 
+  SET last_active = NEW.created_at 
+  WHERE uid = NEW.user_id;
+  RETURN NEW;
+END;
+                                                                                                                                                                                                                                                                                                                                                                                                              |
+| is_user_assigned_to_task     | 
+BEGIN
+  RETURN user_uid = ANY(task_assignees);
+END;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| is_user_assigned_to_task     | 
+BEGIN
+  RETURN user_uid = ANY(task_assignees) OR user_uid = ANY(task_viewers);
+END;
+                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+
+JSONNNN:
+
+[
+  {
+    "routine_name": "update_task_milestone_count",
+    "routine_definition": "\r\nBEGIN\r\n  UPDATE tasks\r\n  SET milestone_count = (\r\n    SELECT COUNT(*) \r\n    FROM task_milestones \r\n    WHERE task_id = COALESCE(NEW.task_id, OLD.task_id)\r\n  )\r\n  WHERE id = COALESCE(NEW.task_id, OLD.task_id);\r\n  \r\n  RETURN COALESCE(NEW, OLD);\r\nEND;\r\n"
+  },
+  {
+    "routine_name": "calculate_milestone_progress",
+    "routine_definition": "\r\nDECLARE\r\n  total_milestones INTEGER;\r\n  completed_milestones INTEGER;\r\n  progress INTEGER;\r\nBEGIN\r\n  SELECT COUNT(*) INTO total_milestones\r\n  FROM task_milestones\r\n  WHERE task_id = p_task_id;\r\n  \r\n  IF total_milestones = 0 THEN\r\n    RETURN 0;\r\n  END IF;\r\n  \r\n  SELECT COUNT(*) INTO completed_milestones\r\n  FROM task_milestones\r\n  WHERE task_id = p_task_id AND status = 'completed';\r\n  \r\n  progress := ROUND((completed_milestones::DECIMAL / total_milestones::DECIMAL) * 100);\r\n  \r\n  RETURN progress;\r\nEND;\r\n"
+  },
+  {
+    "routine_name": "update_user_last_active",
+    "routine_definition": "\r\nBEGIN\r\n  UPDATE users \r\n  SET last_active = NEW.created_at \r\n  WHERE uid = NEW.user_id;\r\n  RETURN NEW;\r\nEND;\r\n"
+  },
+  {
+    "routine_name": "is_user_assigned_to_task",
+    "routine_definition": "\r\nBEGIN\r\n  RETURN user_uid = ANY(task_assignees);\r\nEND;\r\n"
+  },
+  {
+    "routine_name": "is_user_assigned_to_task",
+    "routine_definition": "\r\nBEGIN\r\n  RETURN user_uid = ANY(task_assignees) OR user_uid = ANY(task_viewers);\r\nEND;\r\n"
+  }
+]

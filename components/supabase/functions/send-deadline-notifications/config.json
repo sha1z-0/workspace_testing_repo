@@ -1,0 +1,7 @@
+{
+  "name": "send-deadline-notifications",
+  "description": "Sends email notifications for overdue tasks. Runs on cron or manual trigger.",
+  "runtime": "deno",
+  "entrypoint": "index.ts",
+  "schedule": "*/5 * * * *"
+}
