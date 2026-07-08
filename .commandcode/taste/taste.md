@@ -26,3 +26,10 @@
 
 # architecture
 - Avoid parallel implementations of the same functionality — when the same feature (file upload, retrieval, download) exists in multiple places, consolidate into a single shared utility so fixes apply everywhere and bugs don't recur from duplicated code drifting out of sync. Confidence: 0.65
+
+# code-style
+- When fixing bugs, make surgical fixes only — don't refactor unrelated code or expand scope beyond the issue at hand. Confidence: 0.65
+
+# css
+- For modal/dialog footers that must stay pinned at the bottom: use a column flex layout (fixed header, scrollable middle content with overflow-y:auto, fixed footer as a normal flex child) — do NOT use position:sticky on the footer as it causes floating/overlapping over form content. Confidence: 0.70
+- Always cap modal/dialog height with a viewport-relative max-height (e.g., max-height: 90vh) so the modal never exceeds the visible browser window, regardless of content length. Combine with the column flex layout for the internal scroll. Confidence: 0.70

@@ -10,20 +10,24 @@ import { tasksAPI, usersAPI } from "@/lib/api"
 import type { FirebaseTask } from "@/lib/firebase-types"
 import { useEffect, useState } from "react"
 import {
-  Loader2, Plus, Search, Filter, CheckCircle, Clock, ArrowUpCircle, AlertCircle,
-  UserCircle2, LayoutGrid, Calendar as CalendarIcon, X, Upload, FileText, Eye,
-  Send, Play, MessageSquare, Download, ShieldAlert, Paperclip, Lock, ListChecks
+  Loader2, Plus, Search, Filter, CheckCircle,
+  UserCircle2, LayoutGrid, Calendar as CalendarIcon, X, FileText, Eye,
+  Send, Play, MessageSquare, Download, Paperclip, Lock, ListChecks,
+  ChevronDown, ArrowUpDown
 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { motion, AnimatePresence } from "framer-motion"
 import { format } from "date-fns"
+import { StatusPill } from "@/components/tasks/status-pill"
+import { PriorityPill } from "@/components/tasks/priority-pill"
+import { MilestoneStatusBadge } from "@/components/tasks/milestone-status-badge"
+import { FileDropZone } from "@/components/tasks/file-drop-zone"
+import { TaskButton, TaskButtonGhost } from "@/components/tasks/task-button"
+import { CardProgressBar } from "@/components/tasks/card-progress-bar"
+import { ProgressRing } from "@/components/tasks/progress-ring"
 
 export default function TasksPage() {
   const { user } = useAuth()
@@ -73,6 +77,7 @@ export default function TasksPage() {
   const [editingMilestone, setEditingMilestone] = useState<any>(null)
   const [newMilestoneTitle, setNewMilestoneTitle] = useState("")
   const [milestoneListForManage, setMilestoneListForManage] = useState<any[]>([])
+  const [expandedMilestoneId, setExpandedMilestoneId] = useState<string | null>(null)
 
   const [newTask, setNewTask] = useState({
     title: "",
@@ -132,6 +137,7 @@ export default function TasksPage() {
       tasksAPI.getTaskMilestones(detailTask.id).then(setMilestones).catch(() => setMilestones([]))
     } else if (!detailDialogOpen) {
       setMilestones([])
+      setExpandedMilestoneId(null)
     }
   }, [detailDialogOpen, detailTask?.id])
 
@@ -251,17 +257,6 @@ export default function TasksPage() {
     handleReorderMilestones(reordered.map(m => m.id))
   }
 
-  const getMilestoneStatusBadge = (status: string) => {
-    switch (status) {
-      case "not_started": return <Badge variant="secondary" className="text-[10px] bg-slate-100 text-slate-500">Not Started</Badge>
-      case "in_progress": return <Badge variant="secondary" className="text-[10px] bg-blue-50 text-blue-600">In Progress</Badge>
-      case "pending_review": return <Badge variant="secondary" className="text-[10px] bg-amber-50 text-amber-600">Pending Review</Badge>
-      case "needs_revision": return <Badge variant="secondary" className="text-[10px] bg-red-50 text-red-600">Needs Revision</Badge>
-      case "approved": return <Badge variant="secondary" className="text-[10px] bg-emerald-50 text-emerald-600">Approved</Badge>
-      default: return null
-    }
-  }
-
   const getNextActionableIndex = (milestones: any[]) => {
     const firstPending = milestones.find(m => m.status !== "approved")
     return firstPending ? firstPending.order_index : -1
@@ -305,11 +300,11 @@ export default function TasksPage() {
   const handleStartTask = async (taskId: string, isPhased?: boolean) => {
     try {
       if (isPhased) {
-        const ms = await tasksAPI.getTaskMilestones(taskId)
-        const first = ms.find((m: any) => m.order_index === 0)
-        if (!first) throw new Error("No milestones found for this task.")
-        await tasksAPI.startMilestone(first.id)
+        const next = await tasksAPI.getNextActionableMilestone(taskId)
+        if (!next) throw new Error("No milestone available to start.")
+        await tasksAPI.startMilestone(next.id)
         await tasksAPI.startTask(taskId)
+        if (detailTask) { const m = await tasksAPI.getTaskMilestones(detailTask.id); setMilestones(m) }
       } else {
         await tasksAPI.startTask(taskId)
       }
@@ -379,7 +374,7 @@ export default function TasksPage() {
       }
       await tasksAPI.approveCompletion(taskId, user!.id, reviewerFile)
       await fetchTasks()
-      setDetailDialogOpen(false); setAssignerFile(null)
+      setAssignerReviewOpen(false); setAssignerFile(null)
       toast({ title: "Task completed", description: "The task has been marked complete." })
     } catch (error: any) {
       toast({ title: "Error", description: error?.message || "Failed.", variant: "destructive" })
@@ -419,27 +414,6 @@ export default function TasksPage() {
     const matchesStatus = statusFilter === "all" || task.status === statusFilter
     return matchesSearch && matchesStatus
   })
-  const getTasksByStatus = (status: string) => status === "all" ? filteredTasks : filteredTasks.filter((t) => t.status === status)
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "low": return "bg-emerald-500/20 text-emerald-600 border-emerald-500/40"
-      case "medium": return "bg-amber-500/20 text-amber-600 border-amber-500/40"
-      case "high": return "bg-orange-500/20 text-orange-600 border-orange-500/40"
-      case "urgent": return "bg-red-500/20 text-red-600 border-red-500/40"
-      default: return "bg-slate-500/20 text-slate-600 border-slate-500/40"
-    }
-  }
-
-  const getStatusBadge = (task: any) => {
-    const s = task.status
-    if (s === "todo") return <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600 border-slate-200">To Do</Badge>
-    if (s === "in_progress") return <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-600 border-blue-200">In Progress</Badge>
-    if (s === "pending_review") return <Badge variant="secondary" className="text-xs bg-amber-50 text-amber-600 border-amber-200">Pending Review</Badge>
-    if (s === "pending_completion_review") return <Badge variant="secondary" className="text-xs bg-purple-50 text-purple-600 border-purple-200">Final Review</Badge>
-    if (s === "completed") return <Badge variant="secondary" className="text-xs bg-emerald-50 text-emerald-600 border-emerald-200">Completed</Badge>
-    return null
-  }
 
   const getDueDisplay = (task: any) => {
     const dt = task.dueDatetime || task.dueDate
@@ -464,94 +438,23 @@ export default function TasksPage() {
   const isAssignee = (task: any) => task.assigneeIds?.includes(user?.id || "")
   const isAssigner = (task: any) => task.assignedBy === user?.id
 
-  // === TASK CARD ===
-  const TaskCard = ({ task }: { task: FirebaseTask & { id: string } }) => {
-    const priorityBar = task.priority === "urgent" ? "bg-red-500" : task.priority === "high" ? "bg-orange-500" : task.priority === "medium" ? "bg-amber-500" : "bg-emerald-500"
-    const isPendingReview = task.status === "pending_review" || task.status === "pending_completion_review"
-    const canSubmit = isAssignee(task) && (task.status === "in_progress")
-    const isComplete = task.status === "completed"
+  // Sort state
+  const [sortBy, setSortBy] = useState<"date" | "priority">("date")
 
-    return (
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: -20, opacity: 0 }}
-        layout
-        whileHover={{ y: -3 }}
-        className="group"
-      >
-        <Card className={`relative overflow-hidden border border-slate-200/60 dark:border-slate-800/60 bg-white dark:bg-slate-900 shadow-sm transition-all duration-200 hover:shadow-md ${isComplete ? "opacity-80" : ""}`}>
-          <div className={`absolute left-0 top-0 bottom-0 w-1 ${priorityBar}`} />
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    if (sortBy === "priority") {
+      const order = { urgent: 0, high: 1, medium: 2, low: 3 }
+      return (order[a.priority as keyof typeof order] ?? 2) - (order[b.priority as keyof typeof order] ?? 2)
+    }
+    const dateA = a.dueDatetime || a.dueDate
+    const dateB = b.dueDatetime || b.dueDate
+    if (!dateA && !dateB) return 0
+    if (!dateA) return 1
+    if (!dateB) return -1
+    return new Date(dateA).getTime() - new Date(dateB).getTime()
+  })
 
-          <CardHeader className="pb-3 pl-5 pt-4 pr-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1.5 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="outline" className={`capitalize rounded-md border text-[11px] px-2 py-0 ${getPriorityColor(task.priority)}`}>{task.priority}</Badge>
-                  {getStatusBadge(task)}
-                  {(task.due_date || task.dueDatetime) && (
-                    <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                      <CalendarIcon className="h-3 w-3" />{getDueDisplay(task)}
-                    </span>
-                  )}
-                </div>
-                <CardTitle className="text-[15px] font-semibold leading-snug truncate">{task.title}</CardTitle>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="pl-5 pb-3 pt-0 pr-4">
-            <p className="text-[13px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">{task.description}</p>
-
-            <div className="flex items-center gap-2 mb-3 text-[12px] text-slate-400">
-              <UserCircle2 className="h-3.5 w-3.5" />
-              <span>{getAssigneeName(task)}</span>
-              {task.assignedByName && task.assignedByName !== getAssigneeName(task) && (
-                <span className="truncate">· by {task.assignedByName}</span>
-              )}
-              {task.isPhased && (() => {
-                const summary = milestoneSummaries[task.id]
-                if (summary) return (
-                  <span className="flex items-center gap-1 text-slate-400"><ListChecks className="h-3 w-3" />{summary.approved}/{summary.total}</span>
-                )
-                return <span className="flex items-center gap-1 text-slate-400"><ListChecks className="h-3 w-3" />Phased</span>
-              })()}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                <div className={`h-full rounded-full transition-all duration-500 ${task.progress >= 100 ? "bg-emerald-500" : task.progress >= 50 ? "bg-blue-500" : task.progress > 0 ? "bg-amber-500" : "bg-slate-200"}`} style={{ width: `${task.progress}%` }} />
-              </div>
-              <span className="text-[11px] font-semibold text-slate-500 w-8 text-right">{task.progress}%</span>
-            </div>
-          </CardContent>
-
-          {!isComplete && (
-            <div className="px-5 pb-4 pt-0 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-[13px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 h-8 px-3"
-                onClick={() => { setDetailTask(task); setDetailDialogOpen(true) }}
-              >
-                <Eye className="mr-1.5 h-3.5 w-3.5" />View Details
-              </Button>
-
-              {canSubmit && !isPendingReview && (
-                <Button
-                  size="sm"
-                  className="text-[13px] h-8 px-4 bg-slate-800 hover:bg-slate-700 text-white dark:bg-slate-200 dark:hover:bg-slate-100 dark:text-slate-800"
-                  onClick={() => openReviewDialog(task.id)}
-                >
-                  <Send className="mr-1.5 h-3.5 w-3.5" />Submit for Review
-                </Button>
-              )}
-            </div>
-          )}
-        </Card>
-      </motion.div>
-    )
-  }
+  const getTasksByStatus = (status: string) => status === "all" ? sortedTasks : sortedTasks.filter((t) => t.status === status)
 
   // === SKELETON ===
   const TaskSkeleton = () => (
@@ -566,94 +469,126 @@ export default function TasksPage() {
   )
 
   const containerVariants: import("framer-motion").Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.06 } } }
-  const itemVariants: import("framer-motion").Variants = { hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 50 } } }
+
+  const TAB_LABELS = {
+    all: "All", todo: "To Do", in_progress: "In Progress",
+    pending_review: "Review", pending_completion_review: "Final", completed: "Done"
+  } as const
 
   return (
-    <div className="min-h-screen p-1 space-y-8">
+    <div className="min-h-screen p-1 space-y-6" style={{ background: "#0B0F1A" }}>
       {/* Hero Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 to-slate-900 p-8 text-white shadow-xl ring-1 ring-white/10"
-      >
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-white/5 blur-3xl" />
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl mb-2">Taskboard</h1>
-            <p className="text-slate-300 max-w-xl text-lg">{isCEO ? "Assign, track, and manage team productivity." : "Manage your tasks and track progress."}</p>
-          </div>
-          <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="lg" className="shadow-lg bg-white text-slate-900 hover:bg-slate-100 border-none"><Plus className="mr-2 h-5 w-5" />{isManager ? "Assign Task" : "Create Task"}</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader><DialogTitle>{isManager ? "Assign New Task" : "Create New Task"}</DialogTitle><DialogDescription>{isManager ? "Assign a task to team members." : "Create a new task."}</DialogDescription></DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2"><Label htmlFor="title">Title</Label><Input id="title" value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} placeholder="Task title" /></div>
-                <div className="grid gap-2"><Label htmlFor="description">Description</Label><Textarea id="description" value={newTask.description} onChange={(e) => setNewTask({ ...newTask, description: e.target.value })} placeholder="Task description" /></div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2"><Label htmlFor="priority">Priority</Label><Select value={newTask.priority} onValueChange={(v: any) => setNewTask({ ...newTask, priority: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="low">Low</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="urgent">Urgent</SelectItem></SelectContent></Select></div>
-                  {isManager && (
-                    <div className="grid gap-2"><Label htmlFor="assignees">Assign To</Label><Select value="placeholder" onValueChange={(v) => { if (!newTask.assigneeIds.includes(v)) setNewTask({ ...newTask, assigneeIds: [...newTask.assigneeIds, v] }) }}><SelectTrigger><SelectValue placeholder="Select users" /></SelectTrigger><SelectContent><SelectItem value={user!.id}>Myself</SelectItem>{users.filter(u => u.uid !== user?.id && !newTask.assigneeIds.includes(u.uid)).map(u => (<SelectItem key={u.uid} value={u.uid}>{u.name}</SelectItem>))}</SelectContent></Select></div>
-                  )}
-                </div>
-                {isManager && newTask.assigneeIds.length > 0 && (
-                  <div className="flex flex-wrap gap-2">{newTask.assigneeIds.map(id => { const assignee = id === user?.id ? { name: 'You' } : users.find(u => u.uid === id); return <Badge key={id} variant="secondary" className="flex items-center gap-1 py-1 px-2"><UserCircle2 className="h-3 w-3" />{assignee?.name || 'Unknown'}<button onClick={() => setNewTask({ ...newTask, assigneeIds: newTask.assigneeIds.filter(aid => aid !== id) })} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button></Badge> })}</div>
-                )}
-                {isManager && (
-                  <>
-                    <div className="grid gap-2"><Label htmlFor="viewers">Can View Progress (Optional)</Label><Select value="placeholder" onValueChange={(v) => { if (!newTask.viewerIds.includes(v) && !newTask.assigneeIds.includes(v)) setNewTask({ ...newTask, viewerIds: [...newTask.viewerIds, v] }) }}><SelectTrigger><SelectValue placeholder="Select viewers" /></SelectTrigger><SelectContent>{users.filter(u => !newTask.viewerIds.includes(u.uid) && !newTask.assigneeIds.includes(u.uid)).map(u => (<SelectItem key={u.uid} value={u.uid}>{u.name}</SelectItem>))}</SelectContent></Select></div>
-                    {newTask.viewerIds.length > 0 && (<div className="flex flex-wrap gap-2">{newTask.viewerIds.map(id => { const viewer = users.find(u => u.uid === id); return <Badge key={id} variant="outline" className="flex items-center gap-1 py-1 px-2"><UserCircle2 className="h-3 w-3" />{viewer?.name || 'Unknown'}<button onClick={() => setNewTask({ ...newTask, viewerIds: newTask.viewerIds.filter(vid => vid !== id) })} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button></Badge> })})</div>)}
-                  </>
-                )}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2"><Label htmlFor="dueDate">Due Date</Label><Input id="dueDate" type="date" value={newTask.dueDate} onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })} /></div>
-                  <div className="grid gap-2"><Label htmlFor="dueTime">Due Time</Label><Input id="dueTime" type="time" value={newTask.dueTime} onChange={(e) => setNewTask({ ...newTask, dueTime: e.target.value })} /></div>
-                </div>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pt-2">
+        <div>
+          <h1 className="text-[28px] font-semibold text-[#F1F5F9] tracking-tight">Taskboard</h1>
+          <p className="text-[#64748B] text-[15px] mt-0.5">
+            {isManager ? "Assign, track, and manage team productivity." : "Manage your tasks and track progress."}
+          </p>
+        </div>
+        <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
+          <DialogTrigger asChild>
+            <TaskButton><Plus className="h-4 w-4" />{isManager ? "Assign Task" : "Create Task"}</TaskButton>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[560px] max-h-[90vh] bg-[#121826] border-white/[0.06] text-[#F1F5F9] rounded-[14px] flex flex-col overflow-hidden p-6">
+            <div className="flex-shrink-0 pb-2">
+              <DialogHeader>
+                <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">{isManager ? "Assign New Task" : "Create New Task"}</DialogTitle>
+                <DialogDescription className="text-[13px] text-[#64748B]">{isManager ? "Assign a task to team members." : "Create a new task."}</DialogDescription>
+              </DialogHeader>
+            </div>
+            <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden py-2 space-y-4">
+              <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Title</Label><Input value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} placeholder="Task title" className="w-full box-border bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px] h-10 text-[14px]" /></div>
+              <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Description</Label><Textarea value={newTask.description} onChange={(e) => setNewTask({ ...newTask, description: e.target.value })} placeholder="Task description" className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px] text-[14px]" rows={2} /></div>
 
-                {/* Milestone toggle */}
-                {isManager && (
-                  <div className="grid gap-3 p-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
-                    <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-                      <input type="checkbox" checked={newTask.useMilestones} onChange={(e) => setNewTask({ ...newTask, useMilestones: e.target.checked, milestones: e.target.checked ? [{ title: "", description: "" }] : [] })} className="rounded" />
-                      Break this task into milestones?
-                    </label>
-                    {newTask.useMilestones && (
-                      <div className="space-y-3">
-                        {newTask.milestones.map((m, i) => (
-                          <div key={i} className="flex items-start gap-2">
-                            <span className="text-slate-400 text-xs font-bold pt-2 w-4">{i + 1}</span>
-                            <div className="flex-1 space-y-1.5">
-                              <Input placeholder={`Milestone ${i + 1} title`} value={m.title} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], title: e.target.value }; setNewTask({ ...newTask, milestones: ms }) }} className="h-8 text-sm" />
-                              <Input placeholder="Description (optional)" value={m.description || ""} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], description: e.target.value }; setNewTask({ ...newTask, milestones: ms }) }} className="h-7 text-xs" />
-                            </div>
-                            {newTask.milestones.length > 1 && (
-                              <button onClick={() => { const ms = newTask.milestones.filter((_, j) => j !== i); setNewTask({ ...newTask, milestones: ms }) }} className="pt-2 text-slate-400 hover:text-red-500"><X className="h-4 w-4" /></button>
-                            )}
-                          </div>
-                        ))}
-                        <Button variant="ghost" size="sm" className="text-xs" onClick={() => setNewTask({ ...newTask, milestones: [...newTask.milestones, { title: "", description: "" }] })}><Plus className="h-3 w-3 mr-1" />Add Milestone</Button>
+              {/* Two-column: Priority + Assign To + Due Date + Due Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Priority</Label><Select value={newTask.priority} onValueChange={(v: any) => setNewTask({ ...newTask, priority: v })}><SelectTrigger className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] h-10 text-[14px]"><SelectValue /></SelectTrigger><SelectContent className="bg-[#121826] border-white/[0.08]"><SelectItem value="low">Low</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="urgent">Urgent</SelectItem></SelectContent></Select></div>
+                <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Due Date</Label><Input type="date" value={newTask.dueDate} onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })} className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] h-10 text-[14px] color-scheme-dark" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {isManager ? (
+                  <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Assign To</Label>
+                    <div className="rounded-[10px] bg-[#0B0F1A] border border-white/[0.08] px-3 py-2 space-y-2">
+                      <Select value="placeholder" onValueChange={(v) => { if (!newTask.assigneeIds.includes(v)) { const u = v === user!.id ? user : users.find(x => x.uid === v); setNewTask({ ...newTask, assigneeIds: [...newTask.assigneeIds, v], assigneeNames: [...(newTask as any).assigneeNames || [], u?.name || ""] }) } }}><SelectTrigger className="bg-transparent border-0 p-0 h-auto text-[#F1F5F9] rounded-none shadow-none ring-0 focus:ring-0 data-[placeholder]:text-[#475569] text-[14px]"><SelectValue placeholder="Select users" /></SelectTrigger><SelectContent className="bg-[#121826] border-white/[0.08]"><SelectItem value={user!.id}>Myself</SelectItem>{users.filter(u => u.uid !== user?.id && !newTask.assigneeIds.includes(u.uid)).map(u => (<SelectItem key={u.uid} value={u.uid}>{u.name}</SelectItem>))}</SelectContent></Select>
+                      {newTask.assigneeIds.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 min-w-0">
+                          {newTask.assigneeIds.map(id => { const name = id === user?.id ? "You" : users.find(u => u.uid === id)?.name || "Unknown"; return (<span key={id} className="inline-flex items-center gap-1 rounded-full bg-[#3B82F6]/[0.12] text-[#93C5FD] px-2.5 py-0.5 text-[11px] font-medium max-w-full"><UserCircle2 className="h-3 w-3 flex-shrink-0" /><span className="truncate">{name}</span><button onClick={() => setNewTask({ ...newTask, assigneeIds: newTask.assigneeIds.filter(aid => aid !== id) })} className="ml-0.5 hover:text-[#FCA5A5] flex-shrink-0"><X className="h-3 w-3" /></button></span>) })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (<div />)}
+                <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Due Time</Label><Input type="time" value={newTask.dueTime} onChange={(e) => setNewTask({ ...newTask, dueTime: e.target.value })} className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] h-10 text-[14px] color-scheme-dark" /></div>
+              </div>
+              {isManager && (
+                <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Can View Progress (Optional)</Label>
+                  <div className="rounded-[10px] bg-[#0B0F1A] border border-white/[0.08] px-3 py-2 space-y-2">
+                    <Select value="placeholder" onValueChange={(v) => { if (!newTask.viewerIds.includes(v) && !newTask.assigneeIds.includes(v)) setNewTask({ ...newTask, viewerIds: [...newTask.viewerIds, v] }) }}><SelectTrigger className="bg-transparent border-0 p-0 h-auto text-[#F1F5F9] rounded-none shadow-none ring-0 focus:ring-0 data-[placeholder]:text-[#475569] text-[14px]"><SelectValue placeholder="Select viewers" /></SelectTrigger><SelectContent className="bg-[#121826] border-white/[0.08]">{users.filter(u => !newTask.viewerIds.includes(u.uid) && !newTask.assigneeIds.includes(u.uid)).map(u => (<SelectItem key={u.uid} value={u.uid}>{u.name}</SelectItem>))}</SelectContent></Select>
+                    {newTask.viewerIds.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 min-w-0">
+                        {newTask.viewerIds.map(id => { const name = users.find(u => u.uid === id)?.name || "Unknown"; return (<span key={id} className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] text-[#94A3B8] px-2.5 py-0.5 text-[11px] font-medium max-w-full"><UserCircle2 className="h-3 w-3 flex-shrink-0" /><span className="truncate">{name}</span><button onClick={() => setNewTask({ ...newTask, viewerIds: newTask.viewerIds.filter(vid => vid !== id) })} className="ml-0.5 hover:text-[#FCA5A5] flex-shrink-0"><X className="h-3 w-3" /></button></span>) })}
                       </div>
                     )}
                   </div>
-                )}
-              </div>
-              <DialogFooter><Button onClick={handleCreateTask} disabled={!newTask.title || !newTask.description || isAddingTask || (newTask.useMilestones && newTask.milestones.some(m => !m.title.trim()))}>{isAddingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}{isManager ? "Assign Task" : "Create Task"}</Button></DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </motion.div>
+                </div>
+              )}
 
-      {/* Controls */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative flex-1 w-full md:max-w-md">
-          <Input placeholder="Search tasks..." className="pl-10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border-slate-200/60 dark:border-slate-800/60" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              {/* Milestone builder section */}
+              {isManager && (
+                <div className="rounded-[10px] border border-white/[0.08] bg-[#0F1523] p-4 space-y-3">
+                  <label className="flex items-center gap-2 text-[13px] font-medium text-[#CBD5E1] cursor-pointer">
+                    <input type="checkbox" checked={newTask.useMilestones} onChange={(e) => setNewTask({ ...newTask, useMilestones: e.target.checked, milestones: e.target.checked ? [{ title: "", description: "" }] : [] })} className="rounded accent-[#3B82F6]" />
+                    Break this task into milestones?
+                  </label>
+                  {newTask.useMilestones && (
+                    <div className="space-y-2">
+                      {newTask.milestones.map((m, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#3B82F6]/[0.12] text-[#93C5FD] text-[11px] font-bold flex items-center justify-center mt-1.5">{i + 1}</span>
+                          <div className="flex-1 space-y-1.5">
+                            <Input placeholder={`Milestone ${i + 1} title`} value={m.title} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], title: e.target.value }; setNewTask({ ...newTask, milestones: ms }) }} className="h-8 text-[13px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px]" />
+                            <Input placeholder="Description (optional)" value={m.description || ""} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], description: e.target.value }; setNewTask({ ...newTask, milestones: ms }) }} className="h-7 text-[12px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px]" />
+                          </div>
+                          {newTask.milestones.length > 1 && (
+                            <button onClick={() => { const ms = newTask.milestones.filter((_, j) => j !== i); setNewTask({ ...newTask, milestones: ms }) }} className="pt-1.5 text-[#64748B] hover:text-[#EF4444]"><X className="h-4 w-4" /></button>
+                          )}
+                        </div>
+                      ))}
+                      <TaskButtonGhost onClick={() => setNewTask({ ...newTask, milestones: [...newTask.milestones, { title: "", description: "" }] })}><Plus className="h-3 w-3" />Add Milestone</TaskButtonGhost>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex-shrink-0 border-t border-white/[0.06] pt-3">
+              <DialogFooter><TaskButton onClick={handleCreateTask} disabled={!newTask.title || !newTask.description || isAddingTask || (newTask.useMilestones && newTask.milestones.some(m => !m.title.trim()))}>{isAddingTask ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}{isManager ? "Assign Task" : "Create Task"}</TaskButton></DialogFooter>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Controls Bar */}
+      <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div className="flex items-center gap-2 w-full md:w-auto flex-1">
+          <div className="relative flex-1 md:max-w-[320px]">
+            <Input placeholder="Search tasks..." className="pl-9 bg-[#121826] border-white/[0.06] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px] h-10 text-[14px]" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748B] pointer-events-none" />
+          </div>
+          <button
+            type="button"
+            onClick={() => setSortBy(sortBy === "date" ? "priority" : "date")}
+            className="inline-flex items-center gap-1.5 rounded-[10px] border border-white/[0.08] bg-[#121826] px-3 py-2 text-[13px] font-medium text-[#CBD5E1] hover:bg-white/[0.04] transition-colors"
+          >
+            <ArrowUpDown className="h-3.5 w-3.5 text-[#64748B]" />
+            Sort by: <span className="text-[#F1F5F9]">{sortBy === "date" ? "Date assigned" : "Priority"}</span>
+            <ChevronDown className="h-3 w-3 text-[#64748B]" />
+          </button>
         </div>
         <div className="flex items-center gap-2 w-full md:w-auto">
-          <Button variant="outline" size="sm" asChild className="bg-white/60 backdrop-blur-sm"><a href="/tasks/kanban"><LayoutGrid className="mr-2 h-4 w-4" /> Kanban</a></Button>
+          <Button variant="outline" size="sm" asChild className="bg-[#121826] border-white/[0.08] text-[#CBD5E1] hover:bg-white/[0.06] rounded-[10px]"><a href="/tasks/kanban"><LayoutGrid className="mr-2 h-4 w-4" /> Kanban</a></Button>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px] bg-white/60 backdrop-blur-sm"><Filter className="mr-2 h-3.5 w-3.5 text-slate-400" /><SelectValue placeholder="All Status" /></SelectTrigger>
-            <SelectContent>
+            <SelectTrigger className="w-[160px] bg-[#121826] border-white/[0.08] text-[#F1F5F9] rounded-[10px] h-10 text-[14px]"><Filter className="mr-2 h-3.5 w-3.5 text-[#64748B]" /><SelectValue placeholder="All Status" /></SelectTrigger>
+            <SelectContent className="bg-[#121826] border-white/[0.08]">
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="todo">To Do</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
@@ -665,57 +600,115 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Tabs + Task Grid */}
-      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-white/40 dark:bg-slate-900/40 p-1 rounded-xl border border-slate-200/20 dark:border-slate-800/20 w-full justify-start overflow-x-auto">
-          {[{ id: "all", label: "All" }, { id: "todo", label: "To Do" }, { id: "in_progress", label: "In Progress" }, { id: "pending_review", label: "Review" }, { id: "pending_completion_review", label: "Final" }, { id: "completed", label: "Done" }].map(tab => (
-            <TabsTrigger key={tab.id} value={tab.id} className="relative data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none text-xs">
-              {activeTab === tab.id && <motion.div layoutId="activeTab" className="absolute inset-0 bg-slate-800 dark:bg-slate-200 rounded-lg" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
-              <span className="relative z-10">{tab.label}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        <AnimatePresence mode="wait">
-          <TabsContent value={activeTab} className="mt-6 outline-none" forceMount>
-            {initialLoad ? <TaskSkeleton /> : (
-              <motion.div key={activeTab} variants={containerVariants} initial="hidden" animate="visible" exit="exit" className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {getTasksByStatus(activeTab).length === 0 ? (
-                  <motion.div className="col-span-full flex h-60 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-white/5 p-8 text-center">
-                    <CheckCircle className="h-8 w-8 text-slate-300 mb-3" />
-                    <h3 className="text-base font-medium text-slate-500">No tasks found</h3>
-                    <p className="text-sm text-slate-400 mt-1">{searchQuery ? "Try adjusting your search" : "Create a new task to get started"}</p>
-                  </motion.div>
-                ) : getTasksByStatus(activeTab).map((task) => <TaskCard key={task.id} task={task} />)}
-              </motion.div>
-            )}
-          </TabsContent>
-        </AnimatePresence>
-      </Tabs>
+      {/* Filter Tabs */}
+      <div className="flex gap-1 p-1 rounded-[12px] bg-[#121826] border border-white/[0.06] w-fit">
+        {Object.entries(TAB_LABELS).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveTab(key)}
+            className={`px-3.5 py-1.5 rounded-[10px] text-[13px] font-medium transition-colors ${activeTab === key ? "bg-white/10 text-[#F1F5F9]" : "text-[#64748B] hover:text-[#CBD5E1]"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Task Grid */}
+      <AnimatePresence mode="wait">
+        {initialLoad ? <TaskSkeleton /> : (
+          <motion.div key={activeTab} variants={containerVariants} initial="hidden" animate="visible" exit="exit" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {getTasksByStatus(activeTab).length === 0 ? (
+              <div className="col-span-full flex h-52 flex-col items-center justify-center rounded-[14px] border border-dashed border-white/[0.06] bg-[#121826]/50">
+                <CheckCircle className="h-8 w-8 text-[#475569] mb-3" />
+                <h3 className="text-[15px] font-medium text-[#64748B]">No tasks found</h3>
+                <p className="text-[13px] text-[#475569] mt-1">{searchQuery ? "Try adjusting your search" : "Create a new task to get started"}</p>
+              </div>
+            ) : getTasksByStatus(activeTab).map((task) => {
+              const canSubmit = isAssignee(task) && task.status === "in_progress"
+              const isPhased = task.isPhased
+              const summary = milestoneSummaries[task.id]
+              const allMilestonesDone = isPhased && summary && summary.approved === summary.total && summary.total > 0
+
+              return (
+                <motion.div key={task.id} layout whileHover={{ y: -2 }} className="group">
+                  <div className={`rounded-[14px] border border-white/[0.06] bg-[#121826] p-4 transition-colors hover:border-white/[0.10] ${task.status === "completed" ? "opacity-70" : ""}`}>
+                    {/* Top row: status + priority + due date */}
+                    <div className="flex items-center gap-2 mb-2.5 min-w-0">
+                      <StatusPill status={task.status} className="flex-shrink-0" />
+                      <PriorityPill priority={task.priority} className="flex-shrink-0" />
+                      {(task.dueDate || task.dueDatetime) && (
+                        <span className="ml-auto text-[11px] text-[#475569] flex items-center gap-1 flex-shrink-0 whitespace-nowrap"><CalendarIcon className="h-3 w-3 flex-shrink-0" />{getDueDisplay(task)}</span>
+                      )}
+                    </div>
+
+                    {/* Title + description */}
+                    <h3 className="text-[15px] font-medium text-[#F1F5F9] leading-snug truncate mb-1">{task.title}</h3>
+                    <p className="text-[13px] text-[#64748B] line-clamp-2 mb-3">{task.description}</p>
+
+                    {/* Assignee row + milestone chip */}
+                    <div className="flex items-center gap-2 mb-3 text-[12px] min-w-0">
+                      <div className="flex items-center gap-1.5 text-[#94A3B8] min-w-0 overflow-hidden">
+                        <UserCircle2 className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="truncate whitespace-nowrap">{getAssigneeName(task)}</span>
+                        {task.assignedByName && task.assignedByName !== getAssigneeName(task) && (
+                          <span className="text-[#475569] truncate whitespace-nowrap">· by {task.assignedByName}</span>
+                        )}
+                      </div>
+                      {task.isPhased && (
+                        <span className="ml-auto flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] font-medium text-[#94A3B8] flex-shrink-0">
+                          <ListChecks className="h-3 w-3" />{summary ? `${summary.approved}/${summary.total}` : "Phased"}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Progress bar */}
+                    <CardProgressBar progress={task.progress} status={task.status} />
+
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/[0.04]">
+                      <TaskButton variant="secondary" onClick={() => { setDetailTask(task); setDetailDialogOpen(true) }}><Eye className="h-3.5 w-3.5" />View Details</TaskButton>
+                      {isAssignee(task) && (
+                        isPhased ? (
+                          // Locked: any milestone not approved, or task status not in_progress (pending review / final review / completed)
+                          allMilestonesDone && task.status === "in_progress" ? (
+                            <TaskButton variant="primary" onClick={() => openReviewDialog(task.id)} className="whitespace-nowrap"><Send className="h-3.5 w-3.5" />Submit for Review</TaskButton>
+                          ) : (
+                            <TaskButton variant="secondary" disabled className="whitespace-nowrap cursor-not-allowed"><Lock className="h-3.5 w-3.5" />Submit for Review</TaskButton>
+                          )
+                        ) : canSubmit ? (
+                          <TaskButton variant="primary" onClick={() => openReviewDialog(task.id)} className="whitespace-nowrap"><Send className="h-3.5 w-3.5" />Submit for Review</TaskButton>
+                        ) : (
+                          <TaskButton variant="secondary" disabled className="whitespace-nowrap cursor-not-allowed"><Send className="h-3.5 w-3.5" />Submit for Review</TaskButton>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ===== VIEW DETAILS MODAL ===== */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto bg-[#121826] border-white/[0.06] text-[#F1F5F9] rounded-[14px]">
           {detailTask && (
             <>
               <DialogHeader>
-                <div className="flex items-center gap-2 mb-1">{getStatusBadge(detailTask)}<Badge variant="outline" className={`rounded-md border text-[11px] ${getPriorityColor(detailTask.priority)}`}>{detailTask.priority}</Badge></div>
-                <DialogTitle className="text-lg">{detailTask.title}</DialogTitle>
-                <DialogDescription>{detailTask.description}</DialogDescription>
+                <div className="flex items-center gap-2 mb-1"><StatusPill status={detailTask.status} /><PriorityPill priority={detailTask.priority} /></div>
+                <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">{detailTask.title}</DialogTitle>
+                <DialogDescription className="text-[13px] text-[#64748B]">{detailTask.description}</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-2">
-                {/* Progress ring */}
-                <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-                  <div className="relative w-14 h-14 flex-shrink-0">
-                    <svg className="w-14 h-14 -rotate-90" viewBox="0 0 36 36">
-                      <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" strokeWidth="3" className="text-slate-200 dark:text-slate-700" />
-                      <circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3" strokeLinecap="round" className="text-blue-600" strokeDasharray={`${detailTask.progress * 0.973} 97.3`} />
-                    </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">{detailTask.progress}%</span>
-                  </div>
-                  <div className="text-sm">
-                    <p className="font-medium">Progress</p>
-                    <p className="text-slate-500 text-xs">Assigned to {getAssigneeName(detailTask)}</p>
-                    {detailTask.dueDatetime && <p className="text-slate-400 text-xs">Due {getDueDisplay(detailTask)}</p>}
+                {/* Progress card */}
+                <div className="flex items-center gap-4 p-4 rounded-[12px] bg-[#0F1523] border border-white/[0.04]">
+                  <ProgressRing progress={detailTask.progress} status={detailTask.status} />
+                  <div className="text-[13px]">
+                    <p className="font-medium text-[#F1F5F9]">Progress</p>
+                    <p className="text-[#94A3B8] text-[12px]">{isAssignee(detailTask) ? "Assigned to you" : `Assigned to ${getAssigneeName(detailTask)}`}</p>
+                    {detailTask.dueDatetime && <p className="text-[#64748B] text-[12px]">Due {getDueDisplay(detailTask)}</p>}
                   </div>
                 </div>
 
@@ -723,9 +716,9 @@ export default function TasksPage() {
                 {(milestones.length > 0 || detailTask?.isPhased) && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-slate-500 flex items-center gap-1.5"><ListChecks className="h-3.5 w-3.5" />Milestones</p>
+                      <p className="text-[12px] font-semibold text-[#64748B] flex items-center gap-1.5"><ListChecks className="h-3.5 w-3.5" />Milestones</p>
                       {isAssigner(detailTask) && (
-                        <Button variant="ghost" size="sm" className="h-6 text-[11px] text-slate-500 hover:text-slate-700" onClick={openManageMilestones}>Manage</Button>
+                        <TaskButtonGhost onClick={openManageMilestones}>Manage</TaskButtonGhost>
                       )}
                     </div>
                     <div className="space-y-1.5">
@@ -733,33 +726,43 @@ export default function TasksPage() {
                         const isApproved = m.status === "approved"
                         const isActionable = getNextActionableIndex(milestones) === m.order_index
                         const isLocked = !isApproved && !isActionable
-                        const isAssignee = detailTask.assigneeIds?.includes(user?.id)
-                        const isAssigner = detailTask.assignedBy === user?.id
-                        const canStart = isAssignee && m.status === "not_started" && isActionable
-                        const canSubmit = isAssignee && m.status === "in_progress" && isActionable
-                        const canReview = isAssigner && m.status === "pending_review"
+                        const isAssign = detailTask.assigneeIds?.includes(user?.id)
+                        const isAssgnr = detailTask.assignedBy === user?.id
+                        const canStart = isAssign && m.status === "not_started" && isActionable
+                        const canSubmit = isAssign && m.status === "in_progress" && isActionable
+                        const canReview = isAssgnr && m.status === "pending_review"
 
+                        const rowBg = isLocked ? "bg-[#0F1523]/50 opacity-50" : isActionable ? "bg-[#3B82F6]/[0.06] border-[#3B82F6]/20" : isApproved ? "bg-[#10B981]/[0.04] border-[#10B981]/20" : "bg-[#0F1523] border-white/[0.06]"
                         return (
-                          <div key={m.id} className={`flex items-center justify-between p-2.5 rounded-lg border text-sm ${isLocked ? "bg-slate-50/50 opacity-50 border-slate-100" : isActionable ? "bg-blue-50/50 border-blue-200" : isApproved ? "bg-emerald-50/30 border-emerald-200" : "bg-white border-slate-200"}`}>
+                          <div key={m.id}>
+                            <div
+                              className={`flex items-center justify-between p-2.5 rounded-[10px] border ${rowBg} ${m.description ? "cursor-pointer" : ""}`}
+                              onClick={() => m.description ? setExpandedMilestoneId(expandedMilestoneId === m.id ? null : m.id) : null}
+                            >
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold ${isApproved ? "bg-emerald-500 text-white" : isActionable ? "bg-blue-500 text-white" : "bg-slate-300 text-slate-500"}`}>
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold ${isApproved ? "bg-[#10B981]/20 text-[#6EE7B7]" : isActionable ? "bg-[#3B82F6]/20 text-[#93C5FD]" : "bg-white/[0.06] text-[#64748B]"}`}>
                                 {isApproved ? <CheckCircle className="h-3 w-3" /> : isLocked ? <Lock className="h-3 w-3" /> : i + 1}
                               </div>
-                              <span className="truncate">{m.title}</span>
-                              {getMilestoneStatusBadge(m.status)}
+                              <span className="truncate text-[13px] text-[#CBD5E1]">{m.title}</span>
+                              <MilestoneStatusBadge status={m.status} />
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                              {canStart && <Button variant="ghost" size="sm" className="h-7 text-[11px] text-blue-600 hover:text-blue-700" onClick={() => handleStartMilestone(m.id)}><Play className="h-3 w-3 mr-1" />Start</Button>}
-                              {canSubmit && <Button variant="ghost" size="sm" className="h-7 text-[11px] text-blue-600 hover:text-blue-700" onClick={() => openMilestoneDialog(m.id, "submit")}><Send className="h-3 w-3 mr-1" />Submit</Button>}
-                              {canReview && <div className="flex gap-1"><Button variant="ghost" size="sm" className="h-7 text-[11px] text-green-600 hover:text-green-700" onClick={() => openMilestoneDialog(m.id, "approve")}><CheckCircle className="h-3 w-3" /></Button><Button variant="ghost" size="sm" className="h-7 text-[11px] text-red-600 hover:text-red-700" onClick={() => openMilestoneDialog(m.id, "reject")}><X className="h-3 w-3" /></Button></div>}
-                              {(m.status === "needs_revision" && isAssignee && isActionable) && <Button variant="ghost" size="sm" className="h-7 text-[11px] text-amber-600" onClick={() => openMilestoneDialog(m.id, "submit")}><Send className="h-3 w-3 mr-1" />Resubmit</Button>}
+                              {canSubmit && <TaskButtonGhost onClick={() => openMilestoneDialog(m.id, "submit")} className="text-[#93C5FD]"><Send className="h-3 w-3" />Submit</TaskButtonGhost>}
+                              {canReview && <div className="flex gap-1"><TaskButtonGhost onClick={() => openMilestoneDialog(m.id, "approve")} className="text-[#6EE7B7]"><CheckCircle className="h-3 w-3" /></TaskButtonGhost><TaskButtonGhost onClick={() => openMilestoneDialog(m.id, "reject")} className="text-[#FCA5A5]"><X className="h-3 w-3" /></TaskButtonGhost></div>}
+                              {(m.status === "needs_revision" && isAssign && isActionable) && <TaskButtonGhost onClick={() => openMilestoneDialog(m.id, "submit")} className="text-[#FBBF24]"><Send className="h-3 w-3" />Resubmit</TaskButtonGhost>}
                               {m.latestReview?.employee_file_url && (
-                                <Button variant="ghost" size="sm" className="h-6 px-1" title="Download employee file" onClick={() => downloadFile(m.latestReview.employee_file_url, m.latestReview.employee_file_name || "file")}><FileText className="h-3 w-3 text-blue-500" /></Button>
+                                <button className="p-1 rounded-[8px] hover:bg-white/[0.06] transition-colors" title="Download employee file" onClick={() => downloadFile(m.latestReview.employee_file_url, m.latestReview.employee_file_name || "file")}><FileText className="h-3.5 w-3.5 text-[#93C5FD]" /></button>
                               )}
                               {m.latestReview?.reviewer_file_url && (
-                                <Button variant="ghost" size="sm" className="h-6 px-1" title="Download reviewer file" onClick={() => downloadFile(m.latestReview.reviewer_file_url, m.latestReview.reviewer_file_name || "file")}><FileText className="h-3 w-3 text-amber-500" /></Button>
+                                <button className="p-1 rounded-[8px] hover:bg-white/[0.06] transition-colors" title="Download reviewer file" onClick={() => downloadFile(m.latestReview.reviewer_file_url, m.latestReview.reviewer_file_name || "file")}><FileText className="h-3.5 w-3.5 text-[#FBBF24]" /></button>
                               )}
                             </div>
+                          </div>
+                          {expandedMilestoneId === m.id && m.description && (
+                            <div className="px-2.5 pb-2.5 -mt-1">
+                              <div className="rounded-[10px] bg-[#0F1523] border border-white/[0.04] p-3 text-[13px] text-[#94A3B8] leading-relaxed">{m.description}</div>
+                            </div>
+                          )}
                           </div>
                         )
                       })}
@@ -769,55 +772,53 @@ export default function TasksPage() {
 
                 {/* Assigner notes */}
                 {detailTask.reviewAssignerNotes && (
-                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                    <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1 flex items-center gap-1"><MessageSquare className="h-3 w-3" /> Assigner Notes</p>
-                    <p className="text-sm text-amber-800 dark:text-amber-300">{detailTask.reviewAssignerNotes}</p>
+                  <div className="p-3 rounded-[10px] bg-[#0F1523] border border-[#F59E0B]/20">
+                    <p className="text-[12px] font-medium text-[#FBBF24] mb-1 flex items-center gap-1"><MessageSquare className="h-3 w-3" />Assigner Notes</p>
+                    <p className="text-[13px] text-[#CBD5E1]">{detailTask.reviewAssignerNotes}</p>
                   </div>
                 )}
-
-                {/* Assignee notes from last review */}
+                {/* Progress notes */}
                 {detailTask.reviewNotes && (
-                  <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                    <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Progress Notes</p>
-                    <p className="text-sm text-blue-800 dark:text-blue-300">{detailTask.reviewNotes}</p>
+                  <div className="p-3 rounded-[10px] bg-[#0F1523] border border-[#3B82F6]/20">
+                    <p className="text-[12px] font-medium text-[#93C5FD] mb-1 flex items-center gap-1"><MessageSquare className="h-3 w-3" />Notes from {getAssigneeName(detailTask)}</p>
+                    <p className="text-[13px] text-[#CBD5E1]">{detailTask.reviewNotes}</p>
                   </div>
                 )}
-
                 {/* Submission file */}
                 {detailTask.submissionFileUrl && (
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border">
-                    <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 min-w-0">
-                      <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                      <span className="truncate">{detailTask.submissionFileName || "Submission file"}</span>
-                    </div>
-                    <Button variant="ghost" size="sm" className="flex-shrink-0 ml-2" onClick={() => downloadFile(detailTask.submissionFileUrl, detailTask.submissionFileName || "file")}><Download className="h-4 w-4 mr-1" />Open</Button>
+                  <div className="flex items-center justify-between p-3 rounded-[10px] bg-[#0F1523] border border-white/[0.06]">
+                    <div className="flex items-center gap-2 text-[13px] text-[#CBD5E1] min-w-0"><FileText className="h-4 w-4 text-[#93C5FD] flex-shrink-0" /><span className="truncate">{detailTask.submissionFileName || "Submission file"}</span></div>
+                    <TaskButtonGhost onClick={() => downloadFile(detailTask.submissionFileUrl, detailTask.submissionFileName || "file")}><Download className="h-3.5 w-3.5" />Open</TaskButtonGhost>
                   </div>
                 )}
-                {/* Reviewer file */}
                 {detailTask.reviewAssignerFileUrl && (
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                    <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300 min-w-0">
-                      <FileText className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                      <span className="truncate">{detailTask.reviewAssignerFileName || "Attached file"}</span>
-                    </div>
-                    <Button variant="ghost" size="sm" className="flex-shrink-0 ml-2" onClick={() => downloadFile(detailTask.reviewAssignerFileUrl, detailTask.reviewAssignerFileName || "file")}><Download className="h-4 w-4 mr-1" />Open</Button>
+                  <div className="flex items-center justify-between p-3 rounded-[10px] bg-[#0F1523] border border-[#F59E0B]/20">
+                    <div className="flex items-center gap-2 text-[13px] text-[#FBBF24] min-w-0"><FileText className="h-4 w-4 text-[#FBBF24] flex-shrink-0" /><span className="truncate">{detailTask.reviewAssignerFileName || "Attached file"}</span></div>
+                    <TaskButtonGhost onClick={() => downloadFile(detailTask.reviewAssignerFileUrl, detailTask.reviewAssignerFileName || "file")}><Download className="h-3.5 w-3.5" />Open</TaskButtonGhost>
                   </div>
                 )}
               </div>
-              <DialogFooter className="flex-col gap-2 sm:flex-row">
-                {detailTask.status === "todo" && isAssignee(detailTask) && (
-                  <Button onClick={() => handleStartTask(detailTask.id, detailTask.isPhased)} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"><Play className="mr-2 h-4 w-4" />{detailTask.isPhased ? "Start First Milestone" : "Start Task"}</Button>
+              <DialogFooter className="flex-col gap-2 sm:flex-row mt-2">
+                {isAssignee(detailTask) && detailTask.isPhased && (() => {
+                  const nextIndex = getNextActionableIndex(milestones)
+                  const nextNotStarted = milestones.find((m: any) => m.status === "not_started" && m.order_index === nextIndex)
+                  return nextNotStarted ? (
+                    <TaskButton onClick={() => handleStartTask(detailTask.id, detailTask.isPhased)}><Play className="h-4 w-4" />Start Milestone</TaskButton>
+                  ) : null
+                })()}
+                {detailTask.status === "todo" && isAssignee(detailTask) && !detailTask.isPhased && (
+                  <TaskButton onClick={() => handleStartTask(detailTask.id)}><Play className="h-4 w-4" />Start Task</TaskButton>
                 )}
                 {detailTask.status === "pending_review" && isAssigner(detailTask) && (
-                  <Button onClick={() => { setAssignerReviewTask(detailTask); setAssignerProgress(detailTask.progress); setAssignerNotes(""); setAssignerFile(null); setAssignerAction("review"); setAssignerReviewOpen(true); setDetailDialogOpen(false) }} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700"><MessageSquare className="mr-2 h-4 w-4" />Review Progress</Button>
+                  <TaskButton variant="primary-amber" onClick={() => { setAssignerReviewTask(detailTask); setAssignerProgress(detailTask.progress); setAssignerNotes(""); setAssignerFile(null); setAssignerAction("review"); setAssignerReviewOpen(true); setDetailDialogOpen(false) }}><MessageSquare className="h-4 w-4" />Review Progress</TaskButton>
                 )}
                 {detailTask.status === "pending_completion_review" && isAssigner(detailTask) && (
                   <div className="flex gap-2 w-full">
-                    <Button variant="outline" className="flex-1" onClick={() => { setAssignerReviewTask(detailTask); setAssignerNotes(""); setAssignerFile(null); setAssignerAction("reject"); setAssignerReviewOpen(true); setDetailDialogOpen(false) }}>Reject</Button>
-                    <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700" onClick={() => { setAssignerReviewTask(detailTask); setAssignerNotes(""); setAssignerFile(null); setAssignerAction("approve"); setAssignerReviewOpen(true); setDetailDialogOpen(false) }}>Approve & Complete</Button>
+                    <TaskButton variant="secondary" onClick={() => { setAssignerReviewTask(detailTask); setAssignerNotes(""); setAssignerFile(null); setAssignerAction("reject"); setAssignerReviewOpen(true); setDetailDialogOpen(false) }}>Reject</TaskButton>
+                    <TaskButton variant="primary-purple" onClick={() => { setAssignerReviewTask(detailTask); setAssignerNotes(""); setAssignerFile(null); setAssignerAction("approve"); setAssignerReviewOpen(true); setDetailDialogOpen(false) }}><CheckCircle className="h-4 w-4" />Approve & Complete</TaskButton>
                   </div>
                 )}
-                <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>Close</Button>
+                <TaskButton variant="secondary" onClick={() => setDetailDialogOpen(false)}>Close</TaskButton>
               </DialogFooter>
             </>
           )}
@@ -826,226 +827,150 @@ export default function TasksPage() {
 
       {/* ===== MILESTONE REVIEW DIALOG ===== */}
       <Dialog open={milestoneDialogOpen} onOpenChange={(open) => { if (!open) { setMilestoneDialogOpen(false); setMilestoneFile(null) } }}>
-        <DialogContent className="sm:max-w-[440px]">
+        <DialogContent className="sm:max-w-[440px] bg-[#121826] border-white/[0.06] text-[#F1F5F9] rounded-[14px]">
           <DialogHeader>
-            <DialogTitle>
-              {milestoneAction === "submit" ? "Submit Milestone for Review" :
-               milestoneAction === "approve" ? "Approve Milestone" : "Reject Milestone"}
-            </DialogTitle>
-            <DialogDescription>
-              {milestoneAction === "submit" ? "Add an optional comment and file for the assigner to review." :
-               milestoneAction === "approve" ? "Confirm approval for this milestone." :
-               "Send the milestone back with feedback."}
-            </DialogDescription>
+            <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">{milestoneAction === "submit" ? "Submit Milestone for Review" : milestoneAction === "approve" ? "Approve Milestone" : "Reject Milestone"}</DialogTitle>
+            <DialogDescription className="text-[13px] text-[#64748B]">{milestoneAction === "submit" ? "Add an optional comment and file for the assigner to review." : milestoneAction === "approve" ? "Confirm approval for this milestone." : "Send the milestone back with feedback."}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid gap-2">
-              <Label>Comment</Label>
-              <Textarea value={milestoneComment} onChange={(e) => setMilestoneComment(e.target.value)} placeholder={milestoneAction === "approve" ? "Approval notes..." : milestoneAction === "reject" ? "What needs to be fixed..." : "What I've completed..."} rows={3} />
-            </div>
-            <div className="grid gap-2">
-              <Label className="flex items-center gap-1.5"><Paperclip className="h-3.5 w-3.5 text-slate-400" />Attach File <span className="text-slate-400 text-xs font-normal">(optional)</span></Label>
-              <Input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif" onChange={(e) => setMilestoneFile(e.target.files?.[0] || null)} />
-              {milestoneFile && <p className="text-xs text-slate-500"><FileText className="h-3 w-3 inline mr-1" />{milestoneFile.name} ({(milestoneFile.size / 1024 / 1024).toFixed(1)} MB)</p>}
-            </div>
+            <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Comment</Label><Textarea value={milestoneComment} onChange={(e) => setMilestoneComment(e.target.value)} placeholder={milestoneAction === "approve" ? "Approval notes..." : milestoneAction === "reject" ? "What needs to be fixed..." : "What I've completed..."} rows={3} className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px] text-[14px]" /></div>
+            <FileDropZone tint="neutral" file={milestoneFile} onChange={setMilestoneFile} />
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setMilestoneDialogOpen(false)}>Cancel</Button>
-            {milestoneAction === "submit" && (
-              <Button onClick={handleSubmitMilestoneReview} disabled={isMilestoneSubmitting}>
-                {isMilestoneSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Submit for Review
-              </Button>
-            )}
-            {milestoneAction === "approve" && (
-              <Button onClick={handleApproveMilestone} disabled={isMilestoneSubmitting} className="bg-emerald-600 hover:bg-emerald-700">
-                {isMilestoneSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}Approve Milestone
-              </Button>
-            )}
-            {milestoneAction === "reject" && (
-              <Button onClick={handleRejectMilestone} disabled={isMilestoneSubmitting} variant="destructive">Reject & Return</Button>
-            )}
+          <DialogFooter className="gap-2 mt-2">
+            <TaskButton variant="secondary" onClick={() => setMilestoneDialogOpen(false)}>Cancel</TaskButton>
+            {milestoneAction === "submit" && (<TaskButton onClick={handleSubmitMilestoneReview} disabled={isMilestoneSubmitting}>{isMilestoneSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Submit for Review</TaskButton>)}
+            {milestoneAction === "approve" && (<TaskButton onClick={handleApproveMilestone} disabled={isMilestoneSubmitting}><CheckCircle className="h-4 w-4" />Approve Milestone</TaskButton>)}
+            {milestoneAction === "reject" && (<TaskButton variant="secondary" onClick={handleRejectMilestone} disabled={isMilestoneSubmitting}>Reject & Return</TaskButton>)}
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ===== MANAGE MILESTONES DIALOG (assigner mid-task) ===== */}
+      {/* ===== MANAGE MILESTONES DIALOG ===== */}
       <Dialog open={manageMilestonesOpen} onOpenChange={(open) => { if (!open) { setManageMilestonesOpen(false); setEditingMilestone(null); setNewMilestoneTitle("") } }}>
-        <DialogContent className="sm:max-w-[520px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[520px] max-h-[80vh] overflow-y-auto bg-[#121826] border-white/[0.06] text-[#F1F5F9] rounded-[14px]">
           <DialogHeader>
-            <DialogTitle>Manage Milestones</DialogTitle>
-            <DialogDescription>Add, edit, reorder, or remove milestones for "{detailTask?.title}".</DialogDescription>
+            <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">Manage Milestones</DialogTitle>
+            <DialogDescription className="text-[13px] text-[#64748B]">Add, edit, reorder, or remove milestones for "{detailTask?.title}".</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {milestoneListForManage.length > 0 && (
               <div className="space-y-1.5">
                 {milestoneListForManage.map((m: any, i: number) => (
-                  <div key={m.id} className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white">
-                    <span className="text-[11px] font-bold text-slate-400 w-5 flex-shrink-0">{i + 1}</span>
-                    <span className="flex-1 text-sm truncate">{m.title}</span>
-                    {getMilestoneStatusBadge(m.status)}
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" disabled={i === 0} onClick={() => moveMilestone(i, -1)}><ArrowUpCircle className="h-3 w-3" /></Button>
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" disabled={i === milestoneListForManage.length - 1} onClick={() => moveMilestone(i, 1)}><ArrowUpCircle className="h-3 w-3 rotate-180" /></Button>
-                    <Button variant="ghost" size="sm" className="h-6 text-[11px] text-slate-500 hover:text-slate-700" onClick={() => setEditingMilestone({ ...m })}>Edit</Button>
-                    <Button variant="ghost" size="sm" className="h-6 text-[11px] text-red-500 hover:text-red-700" onClick={() => handleDeleteMilestone(m.id)}><X className="h-3 w-3" /></Button>
+                  <div key={m.id} className="flex items-center gap-2 p-2.5 rounded-[10px] border border-white/[0.06] bg-[#0F1523]">
+                    <span className="text-[11px] font-bold text-[#64748B] w-5 flex-shrink-0">{i + 1}</span>
+                    <span className="flex-1 text-[13px] text-[#CBD5E1] truncate">{m.title}</span>
+                    <MilestoneStatusBadge status={m.status} />
+                    <button type="button" disabled={i === 0} onClick={() => moveMilestone(i, -1)} className="p-1 rounded-[8px] text-[#64748B] hover:text-[#CBD5E1] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none"><ChevronDown className="h-3.5 w-3.5 rotate-180" /></button>
+                    <button type="button" disabled={i === milestoneListForManage.length - 1} onClick={() => moveMilestone(i, 1)} className="p-1 rounded-[8px] text-[#64748B] hover:text-[#CBD5E1] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none"><ChevronDown className="h-3.5 w-3.5" /></button>
+                    <button type="button" onClick={() => setEditingMilestone({ ...m })} className="px-2 py-1 rounded-[8px] text-[12px] font-medium text-[#94A3B8] hover:text-[#CBD5E1] hover:bg-white/[0.06]">Edit</button>
+                    <button type="button" onClick={() => handleDeleteMilestone(m.id)} className="p-1 rounded-[8px] text-[#64748B] hover:text-[#EF4444] hover:bg-white/[0.06]"><X className="h-3.5 w-3.5" /></button>
                   </div>
                 ))}
               </div>
             )}
             <div className="flex items-center gap-2">
-              <Input placeholder="New milestone title" value={newMilestoneTitle} onChange={(e) => setNewMilestoneTitle(e.target.value)} className="h-9" />
-              <Button size="sm" onClick={handleAddMilestoneMidTask} disabled={!newMilestoneTitle.trim()}><Plus className="h-4 w-4" />Add</Button>
+              <Input placeholder="New milestone title" value={newMilestoneTitle} onChange={(e) => setNewMilestoneTitle(e.target.value)} className="h-9 text-[13px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px]" />
+              <TaskButtonGhost onClick={handleAddMilestoneMidTask} disabled={!newMilestoneTitle.trim()}><Plus className="h-3.5 w-3.5" />Add</TaskButtonGhost>
             </div>
-            {milestoneListForManage.length === 0 && (
-              <p className="text-sm text-slate-400 text-center py-4">No milestones yet. Add one to get started.</p>
-            )}
+            {milestoneListForManage.length === 0 && (<p className="text-[13px] text-[#64748B] text-center py-4">No milestones yet. Add one to get started.</p>)}
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => { setManageMilestonesOpen(false); setEditingMilestone(null); setNewMilestoneTitle("") }}>Done</Button></DialogFooter>
+          <DialogFooter className="mt-2"><TaskButton variant="secondary" onClick={() => { setManageMilestonesOpen(false); setEditingMilestone(null); setNewMilestoneTitle("") }}>Done</TaskButton></DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* ===== EDIT MILESTONE DIALOG ===== */}
       <Dialog open={!!editingMilestone} onOpenChange={(open) => { if (!open) setEditingMilestone(null) }}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Edit Milestone</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-[400px] bg-[#121826] border-white/[0.06] text-[#F1F5F9] rounded-[14px]">
+          <DialogHeader><DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">Edit Milestone</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="grid gap-2">
-              <Label>Title</Label>
-              <Input value={editingMilestone?.title || ""} onChange={(e) => setEditingMilestone({ ...editingMilestone, title: e.target.value })} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Description</Label>
-              <Textarea value={editingMilestone?.description || ""} onChange={(e) => setEditingMilestone({ ...editingMilestone, description: e.target.value })} rows={2} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Weight (%)</Label>
-              <Input type="number" min={0} max={100} value={editingMilestone?.weight || 0} onChange={(e) => setEditingMilestone({ ...editingMilestone, weight: parseInt(e.target.value) || 0 })} />
-            </div>
+            <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Title</Label><Input value={editingMilestone?.title || ""} onChange={(e) => setEditingMilestone({ ...editingMilestone, title: e.target.value })} className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] h-10 text-[14px]" /></div>
+            <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Description</Label><Textarea value={editingMilestone?.description || ""} onChange={(e) => setEditingMilestone({ ...editingMilestone, description: e.target.value })} rows={2} className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] text-[14px]" /></div>
+            <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Weight (%)</Label><Input type="number" min={0} max={100} value={editingMilestone?.weight || 0} onChange={(e) => setEditingMilestone({ ...editingMilestone, weight: parseInt(e.target.value) || 0 })} className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] h-10 text-[14px]" /></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingMilestone(null)}>Cancel</Button>
-            <Button onClick={handleEditMilestone}>Save</Button>
+          <DialogFooter className="mt-2">
+            <TaskButton variant="secondary" onClick={() => setEditingMilestone(null)}>Cancel</TaskButton>
+            <TaskButton onClick={handleEditMilestone}>Save</TaskButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* ===== SUBMIT FOR REVIEW MODAL ===== */}
       <Dialog open={reviewDialogOpen} onOpenChange={(open) => { if (!open) { setReviewDialogOpen(false); setReviewFile(null); setReviewNotes("") } }}>
-        <DialogContent className="sm:max-w-[480px]">
+        <DialogContent className="sm:max-w-[480px] bg-[#121826] border-white/[0.06] text-[#F1F5F9] rounded-[14px]">
           <DialogHeader>
-            <DialogTitle>Submit for Review</DialogTitle>
-            <DialogDescription>Choose the type of review to send to the assigner.</DialogDescription>
+            <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">Submit for Review</DialogTitle>
+            <DialogDescription className="text-[13px] text-[#64748B]">Choose the type of review to send to the assigner.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {/* Review type selector */}
             <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setReviewType("progress")}
-                className={`p-4 rounded-xl border-2 text-left transition-all ${reviewType === "progress" ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-slate-200 dark:border-slate-700 hover:border-slate-300"}`}
-              >
-                <MessageSquare className={`h-5 w-5 mb-2 ${reviewType === "progress" ? "text-blue-600" : "text-slate-400"}`} />
-                <p className={`text-sm font-semibold ${reviewType === "progress" ? "text-blue-700 dark:text-blue-400" : "text-slate-600 dark:text-slate-300"}`}>Progress Update</p>
-                <p className="text-xs text-slate-400 mt-1">Share what's done, attach files optionally</p>
+              <button type="button" onClick={() => setReviewType("progress")} className={`p-4 rounded-[12px] border-2 text-left transition-all ${reviewType === "progress" ? "border-[#3B82F6] bg-[#3B82F6]/[0.06]" : "border-white/[0.06] hover:border-white/[0.10]"}`}>
+                <MessageSquare className={`h-5 w-5 mb-2 ${reviewType === "progress" ? "text-[#93C5FD]" : "text-[#64748B]"}`} />
+                <p className={`text-[13px] font-semibold ${reviewType === "progress" ? "text-[#93C5FD]" : "text-[#CBD5E1]"}`}>Progress Update</p>
+                <p className="text-[12px] text-[#64748B] mt-1">Share what's done, attach files optionally</p>
               </button>
-              <button
-                type="button"
-                onClick={() => { if (reviewType !== "completion-gated") setReviewType("completion") }}
-                className={`p-4 rounded-xl border-2 text-left transition-all ${reviewType === "completion" ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20" : reviewType === "completion-gated" ? "border-slate-200 dark:border-slate-700 bg-slate-50/50 opacity-50 cursor-not-allowed" : "border-slate-200 dark:border-slate-700 hover:border-slate-300"}`}
-              >
-                {reviewType === "completion-gated" ? <Lock className="h-5 w-5 mb-2 text-slate-400" /> : <CheckCircle className={`h-5 w-5 mb-2 ${reviewType === "completion" ? "text-purple-600" : "text-slate-400"}`} />}
-                <p className={`text-sm font-semibold ${reviewType === "completion" ? "text-purple-700 dark:text-purple-400" : "text-slate-600 dark:text-slate-300"}`}>Completion Review</p>
-                <p className="text-xs text-slate-400 mt-1">{reviewType === "completion-gated" ? "Complete all milestones first" : "Task is done, file attachment required"}</p>
+              <button type="button" onClick={() => { if (reviewType !== "completion-gated") setReviewType("completion") }} className={`p-4 rounded-[12px] border-2 text-left transition-all ${reviewType === "completion" ? "border-[#8B5CF6] bg-[#8B5CF6]/[0.06]" : reviewType === "completion-gated" ? "border-white/[0.06] bg-[#121826]/50 opacity-50 cursor-not-allowed" : "border-white/[0.06] hover:border-white/[0.10]"}`}>
+                {reviewType === "completion-gated" ? <Lock className="h-5 w-5 mb-2 text-[#64748B]" /> : <CheckCircle className={`h-5 w-5 mb-2 ${reviewType === "completion" ? "text-[#C4B5FD]" : "text-[#64748B]"}`} />}
+                <p className={`text-[13px] font-semibold ${reviewType === "completion" ? "text-[#C4B5FD]" : "text-[#CBD5E1]"}`}>Completion Review</p>
+                <p className="text-[12px] text-[#64748B] mt-1">{reviewType === "completion-gated" ? "Complete all milestones first" : "Task is done, file attachment required"}</p>
               </button>
             </div>
 
-            {/* Progress notes */}
-            <div className="grid gap-2">
-              <Label htmlFor="reviewNotes">{reviewType === "progress" ? "Progress Notes" : "Notes (optional)"}</Label>
-              <Textarea id="reviewNotes" value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} placeholder={reviewType === "progress" ? "What's done, what's left to do..." : "Any notes for the assigner..."} rows={3} />
-            </div>
+            <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">{reviewType === "progress" ? "Progress Notes" : "Notes (optional)"}</Label><Textarea value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} placeholder={reviewType === "progress" ? "What's done, what's left to do..." : "Any notes for the assigner..."} rows={3} className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px] text-[14px]" /></div>
 
-            {/* Optional file upload for progress */}
             {reviewType === "progress" && (
-              <div className="grid gap-2 p-4 rounded-lg border border-dashed border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10">
-                <Label htmlFor="reviewFile" className="flex items-center gap-1.5"><Upload className="h-3.5 w-3.5 text-blue-600" />Attachment <span className="text-slate-400 text-xs font-normal">(optional)</span></Label>
-                <Input id="reviewFile" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif" onChange={(e) => setReviewFile(e.target.files?.[0] || null)} />
-                {reviewFile && <p className="text-xs text-slate-500 flex items-center gap-1"><FileText className="h-3 w-3 text-blue-500" />{reviewFile.name} ({(reviewFile.size / 1024 / 1024).toFixed(1)} MB)</p>}
-              </div>
+              <FileDropZone tint="blue" file={reviewFile} onChange={setReviewFile} />
             )}
-
-            {/* File upload for completion */}
             {reviewType === "completion" && (
-              <div className="grid gap-2 p-4 rounded-lg border border-dashed border-purple-300 dark:border-purple-700 bg-purple-50/50 dark:bg-purple-900/10">
-                <Label htmlFor="reviewFile" className="flex items-center gap-1.5"><Upload className="h-3.5 w-3.5 text-purple-600" />Attachment <span className="text-red-500">*</span></Label>
-                <Input id="reviewFile" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif" onChange={(e) => setReviewFile(e.target.files?.[0] || null)} />
-                {reviewFile && <p className="text-xs text-slate-500 flex items-center gap-1"><FileText className="h-3 w-3 text-purple-500" />{reviewFile.name} ({(reviewFile.size / 1024 / 1024).toFixed(1)} MB)</p>}
-                {!reviewFile && <p className="text-xs text-red-500">File attachment is required for completion review.</p>}
-              </div>
+              <FileDropZone tint="purple" required file={reviewFile} onChange={setReviewFile} />
             )}
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setReviewDialogOpen(false)}>Cancel</Button>
+          <DialogFooter className="gap-2 mt-2">
+            <TaskButton variant="secondary" onClick={() => setReviewDialogOpen(false)}>Cancel</TaskButton>
             {reviewType === "progress" ? (
-              <Button onClick={handleSubmitProgressReview} disabled={!reviewNotes.trim() || isReviewSubmitting}>
-                {isReviewSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}Submit Progress Update
-              </Button>
+              <TaskButton onClick={handleSubmitProgressReview} disabled={!reviewNotes.trim() || isReviewSubmitting}>{isReviewSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Submit Progress Update</TaskButton>
             ) : (
-              <Button onClick={handleSubmitCompletionReview} disabled={!reviewFile || isReviewSubmitting} className="bg-purple-600 hover:bg-purple-700">
-                {isReviewSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}Submit for Completion
-              </Button>
+              <TaskButton variant="primary-purple" onClick={handleSubmitCompletionReview} disabled={!reviewFile || isReviewSubmitting}>{isReviewSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}Submit for Completion</TaskButton>
             )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ===== ASSIGNER REVIEW MODAL (progress, approve & reject) ===== */}
+      {/* ===== ASSIGNER REVIEW MODAL ===== */}
       <Dialog open={assignerReviewOpen} onOpenChange={(open) => { if (!open) { setAssignerReviewOpen(false); setAssignerFile(null) } }}>
-        <DialogContent className="sm:max-w-[460px]">
+        <DialogContent className="sm:max-w-[460px] bg-[#121826] border-white/[0.06] text-[#F1F5F9] rounded-[14px]">
           <DialogHeader>
-            <DialogTitle>
-              {assignerReviewTask?.status === "pending_review" ? "Review Progress" :
-               assignerReviewTask?.status === "pending_completion_review" ? "Approve Completion" : "Review"}
-            </DialogTitle>
-            <DialogDescription>
-              {assignerReviewTask?.status === "pending_review" ? "Set the actual progress percentage and leave feedback." :
-               assignerReviewTask?.status === "pending_completion_review" ? "Attach an optional file and confirm approval." :
-               "Send the task back with feedback explaining what needs work."}
-            </DialogDescription>
+            <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">{assignerReviewTask?.status === "pending_review" ? "Review Progress" : assignerReviewTask?.status === "pending_completion_review" ? "Approve Completion" : "Review"}</DialogTitle>
+            <DialogDescription className="text-[13px] text-[#64748B]">{assignerReviewTask?.status === "pending_review" ? "Set the actual progress percentage and leave feedback." : assignerReviewTask?.status === "pending_completion_review" ? "Attach an optional file and confirm approval." : "Send the task back with feedback explaining what needs work."}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 min-w-0">
             {assignerReviewTask?.status === "pending_review" && (
-              <div className="grid gap-2">
-                <Label>Progress ({assignerProgress}%)</Label>
-                <input type="range" min={0} max={100} value={assignerProgress} onChange={(e) => setAssignerProgress(parseInt(e.target.value))} className="w-full" />
-                <div className="flex justify-between text-xs text-slate-400"><span>0%</span><span>50%</span><span>100%</span></div>
+              <div className="grid gap-2 min-w-0">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[13px] text-[#CBD5E1]">Progress</Label>
+                  <span className="text-[15px] font-semibold text-[#FBBF24] tabular-nums">{assignerProgress}%</span>
+                </div>
+                <input type="range" min={0} max={100} value={assignerProgress} onChange={(e) => setAssignerProgress(parseInt(e.target.value))} className="w-full accent-[#FBBF24] h-2 rounded-full appearance-none bg-[#0F1523] cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#FBBF24] [&::-webkit-slider-thumb]:shadow-none" />
+                <div className="flex justify-between text-[11px] text-[#64748B]"><span>0%</span><span>50%</span><span>100%</span></div>
                 {assignerReviewTask?.reviewNotes && (
-                  <div className="mt-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border text-sm text-blue-800 dark:text-blue-300">
-                    <p className="text-xs font-medium text-blue-600 mb-1">Assignee's notes:</p>
-                    {assignerReviewTask.reviewNotes}
+                  <div className="mt-2 p-3 rounded-[10px] bg-[#0F1523] border-l-2 border-[#3B82F6]/40">
+                    <p className="text-[12px] font-medium text-[#93C5FD] mb-1">Assignee's notes:</p>
+                    <p className="text-[13px] text-[#CBD5E1]">{assignerReviewTask.reviewNotes}</p>
                   </div>
                 )}
               </div>
             )}
-            <div className="grid gap-2">
-              <Label htmlFor="assignerNotes">Feedback</Label>
-              <Textarea id="assignerNotes" value={assignerNotes} onChange={(e) => setAssignerNotes(e.target.value)} placeholder="Leave feedback or comments..." rows={3} />
-            </div>
-            <div className="grid gap-2">
-              <Label className="flex items-center gap-1.5"><Paperclip className="h-3.5 w-3.5 text-slate-400" />Attach File (optional)</Label>
-              <Input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif" onChange={(e) => setAssignerFile(e.target.files?.[0] || null)} />
-              {assignerFile && <p className="text-xs text-slate-500 flex items-center gap-1"><FileText className="h-3 w-3 text-blue-500" />{assignerFile.name} ({(assignerFile.size / 1024 / 1024).toFixed(1)} MB)</p>}
-            </div>
+            <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Feedback</Label><Textarea value={assignerNotes} onChange={(e) => setAssignerNotes(e.target.value)} placeholder="Leave feedback or comments..." rows={3} className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px] text-[14px] resize-none" /></div>
+            <FileDropZone tint="neutral" file={assignerFile} onChange={setAssignerFile} />
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setAssignerReviewOpen(false)}>Cancel</Button>
+          <DialogFooter className="gap-2 mt-2">
+            <TaskButton variant="secondary" onClick={() => setAssignerReviewOpen(false)}>Cancel</TaskButton>
             {assignerAction === "review" ? (
-              <Button onClick={handleAssignerReviewProgress} disabled={isUpdatingTask} className="bg-amber-600 hover:bg-amber-700">{isUpdatingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Set Progress</Button>
+              <TaskButton variant="primary-amber" onClick={handleAssignerReviewProgress} disabled={isUpdatingTask}>{isUpdatingTask ? <Loader2 className="h-4 w-4 animate-spin" /> : null}Set Progress</TaskButton>
             ) : assignerAction === "approve" ? (
-              <Button onClick={() => handleApproveCompletion(assignerReviewTask!.id)} disabled={isUpdatingTask} className="bg-emerald-600 hover:bg-emerald-700">{isUpdatingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}Confirm Approval</Button>
+              <TaskButton onClick={() => handleApproveCompletion(assignerReviewTask!.id)} disabled={isUpdatingTask}>{isUpdatingTask ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}Confirm Approval</TaskButton>
             ) : (
-              <Button onClick={() => handleRejectCompletion(assignerReviewTask!.id)} disabled={isUpdatingTask} variant="destructive">Reject & Return</Button>
+              <TaskButton variant="secondary" onClick={() => handleRejectCompletion(assignerReviewTask!.id)} disabled={isUpdatingTask}>Reject & Return</TaskButton>
             )}
           </DialogFooter>
         </DialogContent>

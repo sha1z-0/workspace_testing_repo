@@ -1,5 +1,572 @@
 # Changes Log — Finova Workspace
 
+## [2026-07-07] Fix Approve Completion Modal Not Closing
+
+### Status: Completed
+
+### Root Cause
+`handleApproveCompletion` called `setDetailDialogOpen(false)` on success — closing the view details modal (which was already closed when the assigner opened the review modal from it), but never closing the assigner review modal itself (`assignerReviewOpen`). The existing "Set Progress" handler (`handleAssignerReviewProgress`) correctly uses `setAssignerReviewOpen(false)` — the approval handler was not following the same pattern.
+
+### Actual Changes Made
+- Replaced `setDetailDialogOpen(false)` with `setAssignerReviewOpen(false)` in `handleApproveCompletion`
+- Pattern matches `handleAssignerReviewProgress` exactly — both now call `setAssignerReviewOpen(false); setAssignerFile(null)` on success
+- The catch block unchanged — modal stays open on failure
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx` — line 377, wrong state variable
+- `supabase/CHANGES.md` — this entry
+
+### Verification
+- [ ] Confirm Approval → modal closes immediately
+- [ ] Approval correctly marks task as Completed
+- [ ] Cancel still works as before
+- [ ] On failure, modal stays open
+
+---
+
+## [2026-07-07] Lock Submit for Review by Task Status, Not Milestone Count
+
+### Status: Completed
+
+### Root Cause
+The milestone "Submit for Review" unlock was gated solely on `allMilestonesDone` (all milestones approved). But the button was unlocked even when the task was already `pending_review`, `pending_completion_review`, or `completed` — because milestone approval alone doesn't tell you the task's review state.
+
+### Status Values Used
+From the task schema and existing non-milestone business logic:
+- `"completed"` — task is genuinely done, assigner approved the final review
+- `"pending_review"` — progress update submitted, awaiting assigner's decision
+- `"pending_completion_review"` — final completion review submitted, awaiting assigner approval
+- `"in_progress"` — task is actively being worked on, no review pending
+
+### Actual Changes Made
+- **Task card** (only location): Changed milestone unlock condition from `allMilestonesDone` to `allMilestonesDone && task.status === "in_progress"`
+- This reuses the same pattern already working for non-milestone tasks — `canSubmit = isAssignee && status === "in_progress"` — and layers the milestone approval check on top
+- Locked states: milestones not all approved, OR task status is `completed`, `pending_review`, or `pending_completion_review`
+
+### Five Test Scenarios
+| # | Scenario | Expected | Mechanism |
+|---|----------|----------|-----------|
+| 1 | Non-milestone, in_progress, no review pending | Enabled | `canSubmit` check (unchanged) |
+| 2 | Non-milestone, pending_review | Locked | `canSubmit` requires `in_progress` (unchanged) |
+| 3 | Milestone, not all approved | Locked | `allMilestonesDone` is false |
+| 4 | Milestone, all approved (2/2, 100%), in_progress | **Enabled** | `allMilestonesDone && status === "in_progress"` |
+| 5 | Milestone, all approved, task Completed | Locked | `status !== "in_progress"` |
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx` — card button unlock condition
+- `supabase/CHANGES.md` — this entry
+
+### Regression Verification
+- [ ] Non-milestone in_progress → button enabled (unchanged)
+- [ ] Non-milestone pending_review/pending_completion_review/completed → button locked (unchanged)
+- [ ] Milestone, not all approved → button locked
+- [ ] Milestone, all approved + in_progress → button enabled (newly correct)
+- [ ] Milestone, all approved + completed → button locked (newly correct)
+- [ ] Milestone start/submit/approve cycle unaffected
+
+---
+
+## [2026-07-07] Fix Jagged Edge on Assigner Review Modal
+
+### Status: Completed
+
+### Root Cause
+Two interacting CSS issues on the assigner review modal at `sm:max-w-[460px]`:
+
+1. The resizable `<Textarea>` (feedback field) defaults to `resize: both` from the browser user-agent stylesheet — the component doesn't set `resize: none`. The resize handle can be dragged outside the modal's 460px boundary, tearing the right edge.
+
+2. The content wrapper and slider wrapper lacked `min-w-0`, so the custom-styled range slider with its long pseudo-element class names could also push past the container.
+
+### Actual Changes Made
+- Added `resize-none` to the assigner review modal's feedback Textarea — prevents the resize handle from being dragged past the modal boundary
+- Added `min-w-0` to the content wrapper and slider grid wrapper for overflow containment
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx` — added `resize-none` to feedback textarea, `min-w-0` to wrappers
+- `supabase/CHANGES.md` — this entry
+
+### Verification
+- [ ] Right edge of Approve Completion modal renders clean and straight
+- [ ] No content overflows past modal boundary
+- [ ] Feedback textarea still accepts input normally
+- [ ] File attachment drop-zone still works
+- [ ] Cancel / Confirm Approval buttons still function unchanged
+- [ ] Progress slider in review mode unaffected
+
+---
+
+## [2026-07-07] Fix Start Milestone Targeting Wrong Milestone (Root Cause: Hardcoded Index)
+
+### Status: Completed
+
+### Root Cause (Specific)
+`app/(workspace)/tasks/page.tsx` line 305 — the `handleStartTask` function resolved the milestone to start via:
+
+```typescript
+const ms = await tasksAPI.getTaskMilestones(taskId)
+const first = ms.find((m: any) => m.order_index === 0)
+await tasksAPI.startMilestone(first.id)
+```
+
+This hardcodes `order_index === 0` — always targeting milestone position 1, regardless of whether it's already approved. After milestone 1 is approved, clicking "Start Milestone" correctly fetches all milestones, but then passes the wrong ID (the approved milestone 1) to `startMilestone`, which correctly rejects it with "This milestone has already been started."
+
+The previous "fix" changed the button's visibility logic but never touched the click handler itself — the button showed at the right time, but the handler still used the hardcoded `order_index === 0` to pick the milestone.
+
+### Actual Changes Made
+- Replaced `ms.find(m => m.order_index === 0)` with `tasksAPI.getNextActionableMilestone(taskId)` — the existing API function that queries for the lowest-order `not_started` milestone, identical to the logic used by both the stepper's `getNextActionableIndex` and the button visibility check
+- Added `setMilestones` refresh after starting so the stepper updates immediately while the dialog stays open
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx` — line 305, replaced hardcoded index with `getNextActionableMilestone` call
+- `supabase/CHANGES.md` — this entry
+
+### Verification
+- [ ] Milestone 1 starts correctly (first call to getNextActionableMilestone returns milestone 1)
+- [ ] After M1 approved, clicking Start Milestone starts M2
+- [ ] After M2 approved, clicking Start Milestone starts M3
+- [ ] Sequential ordering enforced at both API and UI level
+- [ ] Stepper updates immediately after starting (milestones refreshed inline)
+
+---
+
+## [2026-07-07] Fix Missing Start Milestone for Later Milestones + Hide Submit From Assigner
+
+### Status: Completed
+
+### Root Cause
+**Issue 1:** The modal footer's "Start Milestone" button was gated on both `detailTask.status === "todo"` AND `milestones.some(m => m.status === "not_started")`. After the first milestone is approved, the task status transitions to `in_progress`, so the button disappeared and never came back for milestone 2+ — even though there were still not_started milestones waiting.
+
+**Issue 2:** "Submit for Review" on the task card had no role check — it rendered for assigners too, who should only ever see review/approve actions, never submit actions.
+
+### Actual Changes Made
+
+**Issue 1:**
+- Removed the `detailTask.status === "todo"` gate from the "Start Milestone" button
+- Button now uses `getNextActionableIndex(milestones)` to find the next sequential not-started milestone — identical logic to the stepper's `isActionable` check
+- Button renders whenever `isAssignee` + the next-actionable milestone is not_started (regardless of task status being `todo` or `in_progress`)
+- Hides when no actionable not_started milestone exists (all approved, or one currently in_progress/pending_review)
+
+**Issue 2:**
+- Wrapped the entire "Submit for Review" card button in `{isAssignee(task) && (...))}` — assigners never see it
+- This covers all three variants (milestone locked, milestone unlocked, non-milestone)
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx` — modal footer button visibility logic, card button role gate
+- `supabase/CHANGES.md` — this entry
+
+### Regression Verification
+- [ ] Milestone 1: Start Milestone visible → starts → submit → approve
+- [ ] Milestone 2: Start Milestone reappears after M1 approved → starts → submit → approve
+- [ ] Milestone 3+: Same pattern, Start Milestone reappears each time
+- [ ] Start Milestone hidden while a milestone is in_progress or pending_review
+- [ ] Start Milestone hidden once all milestones approved
+- [ ] Sequential locking still enforced (can't start M3 before M2 approved)
+- [ ] Assigner never sees "Submit for Review" on task cards
+- [ ] Assignee still sees "Submit for Review" as appropriate
+- [ ] Assigner's review/approve actions in detail modal unaffected
+- [ ] Non-milestone Start Task button unaffected
+
+---
+
+## [2026-07-07] Fix JSX Syntax Error — Missing Closing Div
+
+### Status: Completed
+
+### Root Cause
+When the expandable milestone description feature was added, a `<div key={m.id}>` wrapper was introduced around each milestone row in the stepper's `.map()` callback. The opening tag was added but the closing `</div>` was not — this is what broke the parser. The error pointed at the top-level `return (` at line 479 only because the unclosed div cascaded a parsing failure up to the next valid expression boundary.
+
+### Actual Changes Made
+- Added missing `</div>` for the `key={m.id}` wrapper between the expandable description conditional and the return parenthesis close
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx` — added missing closing div at line 762
+- `supabase/CHANGES.md` — this entry
+
+---
+
+## [2026-07-07] Unlock Submit for Review + Milestone UI Cleanup
+
+### Status: Completed
+
+### Part 1: Unlock "Submit for Review" When All Milestones Approved
+
+**Root Cause:** The locked placeholder button from the previous pass was always locked, with no check for milestone completion state.
+
+**Changes:**
+- Card now derives `allMilestonesDone` from `milestoneSummaries[task.id]` (when `approved === total && total > 0`)
+- Milestone card footer becomes three-way:
+  - `allMilestonesDone` → primary blue button, calls `openReviewDialog(task.id)` (same flow as non-milestone tasks)
+  - Not all approved → locked secondary button with lock icon (unchanged placeholder)
+- `handleStartTask` for milestone tasks now calls `openMilestoneReview` which feeds into the same `reviewType` logic — the existing `openReviewDialog` already checks `allMilestonesApproved` at the API level and sets `reviewType = "completion-gated"` if any milestone isn't approved
+- Backend enforcement already exists at two layers: `submitCompletionReview` API throws if any milestone unapproved (line 1072-1075 of api.ts), and `openReviewDialog` sets the UI state to `completion-gated` which locks the completion-review option card
+
+### Part 2: Single "Start Milestone" Button
+
+**Root Cause:** An inline per-milestone `canStart` button existed alongside the bottom "Start First Milestone" CTA — two code paths for the same action, plus the bottom button rendered even when all milestones were approved.
+
+**Changes:**
+- Removed inline `{canStart && <TaskButtonGhost ...>Start</TaskButtonGhost>}` from each milestone row in the stepper
+- Bottom button split into two conditionals:
+  - **Milestone tasks + `todo` + at least one `not_started` milestone:** Shows "Start Milestone", calls `handleStartTask(id, true)` which finds the first actionable milestone and starts it
+  - **Non-milestone tasks + `todo`:** Shows "Start Task", calls `handleStartTask(id)` unchanged
+  - **All milestones approved:** Button does not render at all (fixes the screenshot bug where it showed after all were approved with progress at 100%)
+
+### Part 3: Expandable Milestone Descriptions
+
+**Root Cause:** Milestone `description` field was stored in the DB but never surfaced to the employee.
+
+**Changes:**
+- Added `expandedMilestoneId` state
+- Milestone rows with a non-empty description render as clickable (`cursor-pointer`)
+- On click, toggles expanded — description renders inline below the row in a matching inset panel
+- Cleared when the modal closes
+- Read-only — employee can only view, not edit
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx` — card button logic, modal footer button logic, inline Start removal, expandable descriptions
+- `supabase/CHANGES.md` — this entry
+
+### Regression Verification
+- [ ] Non-milestone task: Start Task → 15%, submit → review → complete — full lifecycle works
+- [ ] Non-milestone card: Submit for Review enabled/disabled per status
+- [ ] Milestone task: Start Milestone button visible when milestones not_started
+- [ ] Milestone task: Start Milestone starts the first actionable milestone (sequential ordering)
+- [ ] Milestone task: Start Milestone hidden while milestone in_progress or pending_review
+- [ ] Milestone task: Start Milestone hidden once all milestones approved (no more to start)
+- [ ] Milestone task: Submit for Review locked while milestones pending
+- [ ] Milestone task: Submit for Review unlocks when all milestones approved
+- [ ] Milestone task: Unlocked button leads into same submit-for-review flow (openReviewDialog)
+- [ ] Milestone task: When all approved, clicking Submit for Review → progress update / completion review options
+- [ ] Milestone task: Backend still rejects completion submission if milestones unapproved (api.ts line 1072-1075)
+- [ ] Milestone task: Clicking row with description expands it inline
+- [ ] Milestone task: Clicking row without description does nothing
+- [ ] Milestone task: Expand/collapse toggle works (click again to close)
+- [ ] Card uniformity still holds (no height changes from these modifications)
+- [ ] File attachments on milestone submissions still work
+
+---
+
+## [2026-07-07] Fix Button Wrapping + Locked Submit on Milestone Cards
+
+### Status: Completed
+
+### Root Cause
+**Wrapping:** The "Submit for Review" text could wrap to two lines on narrower cards, making that footer taller than cards with only View Details.
+
+**Missing button:** Milestone-based task cards conditionally hid Submit for Review entirely (`{canSubmit && ...}`), creating a structural height difference (one-button vs two-button footer).
+
+### Actual Changes Made
+- "Submit for Review" button given `whitespace-nowrap` on all three variants — text always stays single-line
+- Footer always renders two buttons: View Details + Submit for Review, on every card, eliminating structural height variance
+- Three-way render for Submit for Review:
+  - **Milestone (`isPhased`):** Rendered as a permanently locked button — secondary variant, `disabled`, lock icon, `cursor-not-allowed`. Always shown, never clickable. **Intentionally stubbed — real unlock logic (checking all milestones approved) is future work.**
+  - **Non-milestone + in_progress (`canSubmit`):** Primary blue button, clickable, opens the review dialog
+  - **Non-milestone + not in_progress:** Secondary disabled button, `cursor-not-allowed`
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx` — card footer restructured to always show both buttons
+- `supabase/CHANGES.md` — this entry
+
+### Regression Verification
+- [ ] "Submit for Review" text stays on one line at all 3-column grid widths
+- [ ] All cards (all statuses, all priorities, with/without milestones) are identical height in same row
+- [ ] Non-milestone "Submit for Review" (in_progress) still opens the review dialog
+- [ ] Non-milestone "Submit for Review" (other statuses) is disabled and does nothing
+- [ ] Milestone "Submit for Review" is locked, shows lock icon, does nothing when clicked
+- [ ] Milestone button is a placeholder only — no submission attempt fires
+
+---
+
+## [2026-07-07] Fix Title Input Overflow in Assign Modal
+
+### Status: Completed
+
+### Root Cause
+The scrollable content area in the Assign modal lacked `min-w-0` and `overflow-x-hidden`, allowing the Title input (with `w-full`) to measure against the grid parent without constraint and push past the modal padding. Added `box-border` explicitly to the input as a secondary safeguard.
+
+### Actual Changes Made
+- Scrollable content wrapper: added `min-w-0 overflow-x-hidden` to enforce width bounds
+- Title Input: added `w-full box-border` to ensure it sizes within its container with padding included
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx` — modal scroll wrapper + Title input className
+- `supabase/CHANGES.md` — this entry
+
+---
+
+## [2026-07-07] Fix Horizontal Overflow in Assign Modal Chips
+
+### Status: Completed
+
+### Root Cause
+Chip containers in Assign To / Can View Progress fields lacked `min-w-0` to enable overflow containment, and individual chip names weren't wrapped in a truncation span — long names like "Dr. Jonathan Christopher Williams III" would stretch the chip past the container edge.
+
+### Actual Changes Made
+- Chip flex wrapper: added `min-w-0` for overflow containment
+- Each chip: added `max-w-full`, moved name into `<span className="truncate">`, gave icon and X button `flex-shrink-0`
+- Both Assign To and Can View Progress field chips updated identically
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx` — chip containers in both fields
+- `supabase/CHANGES.md` — this entry
+
+---
+
+## [2026-07-07] Fix Card Uniformity — Wrapping Pills + Names
+
+### Status: Completed
+
+### Root Cause
+Three elements could change card height: status pills wrapped for longer labels like "Pending Review" (no `whitespace-nowrap`), assignee names wrapped to two lines on cards with extra header badges (no truncation), and the header row could push layout inconsistently when pills competed for space.
+
+### Actual Changes Made
+
+**StatusPill + PriorityPill (`components/tasks/`):**
+- Added `whitespace-nowrap` to both pill components — all status labels ("To Do", "In Progress", "Pending Review", "Final Review", "Completed") and priority labels stay on one line
+
+**Task card header row (`page.tsx`):**
+- Pills given `flex-shrink-0` to prevent squishing
+- Due date span given `whitespace-nowrap` and its icon `flex-shrink-0`
+- Container given `min-w-0` to enable proper flex overflow
+
+**Task card assignee row (`page.tsx`):**
+- Name span: `truncate whitespace-nowrap` — overflows with ellipsis instead of wrapping
+- "· by [assigner]" span: same truncation
+- Container: `min-w-0 overflow-hidden` to enable truncation
+- User icon: `flex-shrink-0` to preserve size
+
+### Files Touched
+- `components/tasks/status-pill.tsx` — `whitespace-nowrap`
+- `components/tasks/priority-pill.tsx` — `whitespace-nowrap`
+- `app/(workspace)/tasks/page.tsx` — card header/assignee row truncation
+- `supabase/CHANGES.md` — this entry
+
+### Verification (tested combinations)
+- [ ] "Pending Review" pill stays single line (longest label, 14 chars)
+- [ ] All five statuses + all four priorities = uniform header height
+- [ ] Assignee name "Jordan Taylor" stays single line even with milestone badge present
+- [ ] Long assignee names (multi-person "You, Jennifer +1") truncate with ellipsis
+- [ ] Title truncates to 1 line (existing `truncate` on h3)
+- [ ] Description clamps to 2 lines (existing `line-clamp-2`)
+- [ ] Card height identical across all status/priority/badge combinations in same row
+- [ ] View Details still shows full untruncated data
+
+---
+
+## [2026-07-07] Fix Modal Viewport Overflow (Regression Fix)
+
+### Status: Completed
+
+### Root Cause
+The flex column layout from the previous scroll fix was structurally correct (header, scrollable middle, footer), but the `DialogContent` had no `max-height` constraint. Radix centers the dialog vertically with `translate-y[-50%]`, so when the content exceeded the viewport height, both the header was pushed above the screen and the footer below it — no amount of internal scrolling helps when the container itself is taller than the viewport.
+
+### Actual Changes Made
+- Added `max-h-[90vh]` to the Assign New Task `DialogContent` className — caps the modal at 90% of the browser viewport height
+- The existing flex layout already handles the rest correctly: header (`flex-shrink-0`), middle content (`flex-1 min-h-0 overflow-y-auto`), footer (`flex-shrink-0`)
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx` — added `max-h-[90vh]` to Assign Task modal
+- `supabase/CHANGES.md` — this entry
+
+### Verification (with 5 milestones at laptop height)
+- [ ] Modal title + close icon always visible at top
+- [ ] Assign Task + Cancel buttons always visible at bottom
+- [ ] Middle content scrolls independently
+- [ ] No functional regressions
+
+---
+
+## [2026-07-07] Fix Floating Assign Button + Matching Button Sizes
+
+### Status: Completed
+
+### Root Cause
+**Issue 1:** The previous scroll fix used `sticky bottom-0` on `DialogFooter` inside Radix's CSS grid `DialogContent`. Sticky positioning inside a grid cell only sticks within that cell — it doesn't anchor to the bottom of the modal. When the grid cell scrolled, the footer scrolled with it and floated over the content.
+
+**Issue 2:** "View Details" had an explicit `className="px-3 py-1.5 text-[12px]"` override while "Submit for Review" used the default `TaskButton` sizing (`px-4 py-2.5 text-[13px]`), making them different heights.
+
+### Actual Changes Made
+
+**Issue 1 — Flex column layout for Assign modal:**
+- `DialogContent` className changed from default grid to `flex flex-col overflow-hidden p-6`
+- Header wrapped in `flex-shrink-0 pb-2` — fixed, never scrolls
+- Middle content on `flex-1 min-h-0 overflow-y-auto py-2 space-y-4` — the only scrollable section
+- Footer wrapped in `flex-shrink-0 border-t border-white/[0.06] pt-3` — fixed, always visible at bottom
+- Removed `sticky bottom-0` and the old `max-h-[55vh] overflow-y-auto pr-1 grid gap-4` approach
+
+**Issue 2 — Uniform button sizing on task cards:**
+- Removed `className="px-3 py-1.5 text-[12px]"` override from View Details `TaskButton`
+- Both View Details (secondary variant) and Submit for Review (primary variant) now use the same default sizing (`px-4 py-2.5 text-[13px]`)
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx` — Assign modal layout restructure, button class cleanup
+- `supabase/CHANGES.md` — this entry
+
+### Regression Verification
+- [ ] Assign modal header stays fixed, middle content scrolls, footer pinned at bottom
+- [ ] Assign Task button always visible regardless of milestone count
+- [ ] All form fields reachable when scrolling with many milestones
+- [ ] Task creation still works correctly (handleCreateTask unchanged)
+- [ ] View Details + Submit for Review buttons match in vertical sizing
+- [ ] Both card buttons still trigger correct handlers
+
+---
+
+## [2026-07-07] Redesign Polish Pass — Card Heights, Chips, Scroll, Buttons
+
+### Status: Completed
+
+### Root Cause
+Four visual gaps from the original redesign spec remained after the initial pass: card footer inconsistency, chips outside fields, unscrollable create modal, and weak completion-review drop-zone contrast.
+
+### Actual Changes Made
+
+**Issue 1 — Consistent card heights:**
+- Removed conditional footer on task cards (`!isComplete &&` gate)
+- Every card now always renders the same footer section with a secondary-style "View Details" button
+- Completed cards keep the subtitle opacity-70 but get the same structural bottom section
+- Result: all cards in the grid have identical height regardless of status
+
+**Issue 2a — Chips inside field containers:**
+- "Assign To" and "Can View Progress" fields now render as a visual container (`rounded-[10px] bg-[#0B0F1A] border border-white/[0.08] px-3 py-2 space-y-2`) with the Select trigger stripped of its own border/background, and chips rendering inside the same box below the trigger
+- Select trigger styled as borderless with full container-width area
+
+**Issue 2b — Scrolling modal content:**
+- Create modal content wrapper given `max-h-[55vh] overflow-y-auto pr-1` so the form scrolls independently
+- DialogFooter made `sticky bottom-0` with `bg-[#121826]` and `pt-3` padding so "Assign Task" button always stays visible at the bottom regardless of milestone count
+
+**Issue 3 — Button styling + spacing:**
+- "View Details" changed from `TaskButtonGhost` to `TaskButton variant="secondary"` with `px-3 py-1.5 text-[12px]` — renders as a proper outlined button with border and hover state
+- Action button row changed from `justify-between` to natural `gap-2` flow — buttons sit close together as a related group
+
+**Issue 4 — Completion drop-zone contrast + disabled button:**
+- Purple tint strengthened: border `#8B5CF6/40` (was `/30`), background `#8B5CF6/[0.08]` (was `/[0.04]`) — significantly more visible
+- Disabled button opacity bumped from `opacity-40` to `opacity-50` on both `TaskButton` and `TaskButtonGhost` — still clearly disabled but legible
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx` — card footer restructure, chip containers, scrollable modal, secondary button, sticky footer
+- `components/tasks/file-drop-zone.tsx` — stronger purple tint
+- `components/tasks/task-button.tsx` — disabled opacity 40→50
+- `supabase/CHANGES.md` — this entry
+
+### Regression Verification
+- [ ] All task cards render at consistent height across statuses
+- [ ] "View Details" styled as secondary/outline button on every card
+- [ ] Completed cards still show View Details (can inspect completed tasks)
+- [ ] Assignee chips render inside the field container, not below it
+- [ ] Can View Progress chips render inside the field container
+- [ ] Create modal scrolls with many milestones; Assign Task button always visible
+- [ ] Status filter tabs unchanged (card map still uses getTasksByStatus)
+- [ ] Sort-by control unchanged
+- [ ] Completion drop-zone tint clearly distinguishable from progress drop-zone
+- [ ] Disabled Submit for Completion button still legible (50% opacity)
+- [ ] Assignee selection still saves correct people (only visual container changed)
+- [ ] Milestone builder still works correctly
+- [ ] Completion review mandatory file enforcement unchanged (frontend logic untouched)
+
+---
+
+## [2026-07-07] Fix Duplicate getTasksByStatus Declaration
+
+### Status: Completed
+
+### Root Cause
+During the taskboard visual redesign, a second `getTasksByStatus` was introduced at line 456 operating on `sortedTasks` for the new sort-by feature, but the original declaration at line 415 operating on raw `filteredTasks` was not removed. This caused `Identifier 'getTasksByStatus' has already been declared` at build time.
+
+### Actual Changes Made
+- Removed the old `getTasksByStatus` declaration (line 415, operating on `filteredTasks`)
+- Kept the new one (line 455, operating on `sortedTasks`) — this correctly supports both status filtering and sort-by-date/priority since `sortedTasks` is derived from `filteredTasks`
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx` — removed duplicate line 415
+- `supabase/CHANGES.md` — this entry
+
+---
+
+## [2026-07-07] Task Panel Visual Redesign (Frontend Only)
+
+### Status: Completed
+
+### Summary
+Pure visual/layout restyle of all task-related screens: taskboard dashboard, task detail modal (both assigner and employee views), review-progress modal, assign-new-task modal, submit-for-review modal (progress + completion states), milestone review dialogs, and manage/edit milestone dialogs. Zero functional changes — every button calls the exact same handler, every form submits identical data, every conditional render behaves identically.
+
+### Design System Applied
+
+**Colors:** Dark theme across surface layers — page `#0B0F1A`, card/modal `#121826`, inset surfaces `#0F1523`, borders `rgba(255,255,255,0.06-0.08)`. Text: primary `#F1F5F9`, secondary `#CBD5E1/#94A3B8`, muted `#64748B`, disabled `#475569`.
+
+**Status/priority pills:** Shared `StatusPill` and `PriorityPill` components — clean rounded pills with status-colored dot (priority) or tinted background (status), replacing old colored badges and heavy left-border bars on cards.
+
+**Buttons:** `TaskButton` and `TaskButtonGhost` components — 10px radius, consistent padding. Variants: primary (blue `#3B82F6`), primary-purple (`#8B5CF6`), primary-amber (`#FBBF24` + dark text), secondary (transparent + border).
+
+**File drop-zone:** Unified `FileDropZone` component used everywhere — 1.5px dashed border, upload icon, "Drag a file here or click to browse" text, 10px radius. Required state (completion review) uses purple tint + calm helper line instead of red warning blocks.
+
+**Progress:** `CardProgressBar` (5px rounded track with status-colored fill) and `ProgressRing` (SVG circle with percentage center) components.
+
+**Milestone rows:** `MilestoneStatusBadge` component — tinted pill per status (not_started, in_progress, pending_review, needs_revision, approved). Used in both View Details stepper and Manage Milestones dialog.
+
+### New Shared Components (`components/tasks/`)
+| File | Purpose |
+|------|---------|
+| `status-pill.tsx` | Status pill with tinted background per status |
+| `priority-pill.tsx` | Priority pill with colored dot |
+| `milestone-status-badge.tsx` | Milestone status badge |
+| `file-drop-zone.tsx` | Unified file attachment drop-zone (neutral/blue/purple tints, required flag) |
+| `task-button.tsx` | `TaskButton` (primary/purple/amber/secondary) and `TaskButtonGhost` |
+| `card-progress-bar.tsx` | Thin 5px progress bar with status-colored fill |
+| `progress-ring.tsx` | SVG circular progress ring with percentage |
+
+### Screen-by-Screen Changes
+
+1. **Taskboard:** Simplified header (flat title + subtitle, no gradient hero). New "Sort by" toggle (Date assigned / Priority). Filter tabs restyled as compact segmented control. Cards redesigned: status pill + priority pill on top row, due date right-aligned, no colored left-border bar, milestone chip showing "N/M approved", progress bar at bottom.
+
+2. **View Details (assigner):** Status + priority pills in header. Progress card with ring on `#0F1523` inset surface. Milestone section with Manage button. Milestone rows with proper dark-tinted backgrounds per state. File rows restyled.
+
+3. **View Details (employee):** Same modal, "Assigned to you" context-aware label. Actionable milestone gets blue-tinted border + inline Start/Submit buttons.
+
+4. **Review Progress (assigner):** Slider with current value shown prominently, 0%/50%/100% tick labels, amber thumb/fill. Assignee's notes shown as quoted inset with left accent border. File drop-zone unified.
+
+5. **Assign New Task:** Dark-themed inputs/selects. Two-column grid for Priority + Due Date. Assignee selections render as removable chips inside the field area. Milestone builder in its own bordered inset section with numbered circles.
+
+6. **Submit for Review:** Two selectable option cards (Progress Update / Completion Review) with colored border + tinted background on selection. Unified file drop-zone with progress-blue tint (optional) or completion-purple tint (required).
+
+7. **Milestone Review:** Unified file drop-zone replacing old file input.
+
+8. **Manage/Edit Milestones:** Dark-themed, `MilestoneStatusBadge` usage, consistent button styling.
+
+### Files Touched
+- `components/tasks/status-pill.tsx` (new)
+- `components/tasks/priority-pill.tsx` (new)
+- `components/tasks/milestone-status-badge.tsx` (new)
+- `components/tasks/file-drop-zone.tsx` (new)
+- `components/tasks/task-button.tsx` (new)
+- `components/tasks/card-progress-bar.tsx` (new)
+- `components/tasks/progress-ring.tsx` (new)
+- `app/(workspace)/tasks/page.tsx` — full JSX restyle, imports cleaned up
+- `supabase/CHANGES.md` — this entry
+
+### Regression Verification
+- [ ] Start task (non-milestone) → sets 15%, status in_progress
+- [ ] Start task (milestone) → first milestone starts, progress stays 0
+- [ ] Submit progress review (no file) → pending_review, notes saved
+- [ ] Submit progress review (with file) → file uploaded, assigner sees it
+- [ ] Submit completion review → requires file (still enforced), goes to pending_completion_review
+- [ ] Assigner approve completion → marks completed, progress 100%
+- [ ] Assigner reject completion → returns to in_progress with feedback
+- [ ] Assignee cannot self-complete (only assigner can)
+- [ ] File viewing/download for all attachment types (blob-based download)
+- [ ] Inline "Start" button on milestone → milestone status → in_progress
+- [ ] Bottom "Start First Milestone" → milestone starts, dialog closes
+- [ ] Sequential milestone locking intact (M2 locked until M1 approved)
+- [ ] Milestone submit for review → pending_review, assigner sees it
+- [ ] Milestone approve → approved, progress recalculated
+- [ ] Milestone reject → needs_revision, re-submittable
+- [ ] Manage Milestones: add/edit/reorder/delete all work
+- [ ] Assignee multi-select saves correct people (visual only changed — chips inside field)
+- [ ] Due date/time saving unchanged
+- [ ] Priority selection unchanged
+
+---
+
 ## [2026-07-07] File Upload Consolidation + Milestone File RLS + Auto-Download
 
 ### Status: Completed (RLS fix SQL must be run manually)
