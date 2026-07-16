@@ -1,5 +1,302 @@
 # Changes Log — Finova Workspace
 
+## [2026-07-15] Nearest Deadline Sort Implementation
+### Status: Completed
+### Root Cause / Context
+User requested a new sorting option to order tasks by the "Nearest Deadline" (most recently coming due date/time compared to right now).
+Additionally, the existing "Date assigned" sort was incorrectly evaluating `dueDate` instead of `createdAt`.
+### Actual Changes Made
+- Expanded `sortBy` state to include `"deadline"`.
+- Updated `sortedTasks` logic:
+  - `"deadline"` uses `Math.abs(dueDate - Date.now())` to sort tasks nearest to the current exact time first. Tasks without deadlines are pushed to the bottom.
+  - `"date"` now correctly sorts by `createdAt` descending (newest assigned first).
+- Updated the Sort toggle button to cycle between "Date assigned", "Priority", and "Nearest Deadline".
+- Added `whitespace-nowrap` to the sort button to prevent text wrapping on smaller screens.
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+### Verification Checklist
+- [ ] Sort button toggles correctly: Date assigned -> Priority -> Nearest Deadline -> Date assigned.
+- [ ] Nearest Deadline mode brings tasks due today/tomorrow to the top.
+- [ ] Date Assigned mode correctly orders by when the task was created (newest first).
+- [ ] Tasks with no due dates go to the bottom in Nearest Deadline mode.
+
+## [2026-07-15] Milestone & Task Mandatory Fields Epic (API + UI)
+### Status: Completed
+### Overview
+Comprehensive epic covering milestone `due_datetime` support, `submission_open` enforcement, and mandatory field validation for tasks and milestones across the API layer and UI.
+### API Layer Changes (`lib/api.ts`)
+- **`createTask`** milestone mapping: `due_datetime` computed from `m.dueDate`/`m.dueTime`; weight defaults fixed to remainder distribution.
+- **`toggleMilestoneSubmission`**: New function to toggle `submission_open` on `task_milestones`.
+- **`submitMilestoneReview`**: Now selects `submission_open` and blocks submissions when closed.
+- **`addMilestone`**: Updated signature with `dueDate`, `dueTime`; computes `due_datetime`.
+- **`updateMilestone`**: Signature now accepts `due_datetime` and `submission_open` (replaces old `due_date`).
+### UI Changes (`app/(workspace)/tasks/page.tsx`)
+#### Mandatory Field Validation
+- **Due Date & Time**: Now mandatory on task creation — inline red-bordered inputs + error messages. Validation in `handleCreateTask`.
+- **Milestone creation**: Title, Description, Due Date, Due Time all mandatory in both the inline builder (create dialog) and the Manage Milestones dialog.
+- **Milestone editing**: Due Date + Due Time inputs added to edit dialog; saved as `due_datetime`.
+#### Milestone Deadline Enforcement
+- **Assigner toggle**: Lock/Unlock button in View Details stepper toggles `submission_open` per milestone.
+- **Assignee block**: "Submit" and "Resubmit" buttons replaced with disabled "Closed" when `submission_open === false`.
+- **Due date display**: Milestone due datetime shown alongside title in stepper rows.
+### Files Touched
+- `lib/api.ts` — 5 functions modified/added
+- `app/(workspace)/tasks/page.tsx` — mandatory validation, milestone builder UI, manage/edit dialogs, stepper deadline enforcement
+- `supabase/CHANGES.md` — this entry
+### Verification
+- [ ] Task Creation blocked if Due Date or Due Time is empty
+- [ ] Milestone addition blocked if Title, Description, Due Date, Due Time are empty
+- [ ] Editing milestone supports changing Due Date & Time
+- [ ] Assigner can toggle `submission_open` for a milestone (in_progress/pending_review)
+- [ ] Assignee cannot submit a milestone if `submission_open` is false (shows "Closed" disabled button)
+- [ ] Milestone due datetime displayed in stepper row
+
+## [2026-07-15] Login Page — Password Show/Hide + Remove Forgot Password + Task Assignment Mandatory Fields
+### Status: Completed
+### Change 1: Login Page — Password Show/Hide Eye Icon
+#### Actual Changes Made
+- Added `showPassword` state.
+- Added `Eye` and `EyeOff` from lucide-react imports.
+- Desktop password field: wrapped in `relative` div, added eye icon button (`absolute right-3`) that toggles `type` between `password` and `text`. Input gets `pr-12` to avoid text overlapping the icon.
+- Mobile password field: same treatment with `pr-14` and `right-4` positioning for the larger mobile input.
+- Both eye buttons have `tabIndex={-1}` (not in tab order) and `aria-label` for accessibility.
+### Change 2: Login Page — Remove Forgot Password Link
+#### Actual Changes Made
+- Desktop layout: Removed the `<p>` block containing "Forgot password? Click here" (was between the Login button and Terms text).
+- Mobile layout: Removed the equivalent `<p>` block (was between the form and Terms text).
+- Terms of Service and Privacy Policy text retained in both layouts.
+### Change 3: Task Assignment — Mandatory Fields Validation (Assigned To)
+#### Root Cause
+The task creation form for managers had no validation on the "Assign To" field. A manager could create a task with zero assignees — the task would be created with no one assigned.
+#### Actual Changes Made
+- Added `assigneeError` state.
+- `handleCreateTask`: validates `newTask.assigneeIds.length > 0` for managers before proceeding. Sets `assigneeError` and returns early if empty.
+- Assign To field Label updated with red asterisk.
+- Assign To container div: shows red border when `assigneeError` is true.
+- Inline error message: "Please assign this task to at least one person."
+- Error clears when user selects an assignee.
+- Dialog `onOpenChange`: resets `assigneeError` on close.
+- Submit button `disabled`: removed assignee count from condition (validation moved to handler + inline UI).
+> **Note:** Title remains as a `disabled` button gate (no inline error needed — self-evident from empty field). Description and Assigned To both use inline error pattern.
+### Files Touched
+- `app/login/page.tsx` — showPassword state, Eye/EyeOff import, desktop + mobile password fields, removed Forgot Password from both layouts
+- `app/(workspace)/tasks/page.tsx` — assigneeError state, handleCreateTask validation, Assign To UI error, Dialog onOpenChange, button disabled condition
+- `supabase/CHANGES.md` — this entry
+### Verification
+#### Login Page
+- [ ] Desktop: Password field has eye icon on the right
+- [ ] Desktop: Clicking eye reveals password as plain text
+- [ ] Desktop: Clicking again hides password
+- [ ] Desktop: Eye icon does not overlap password text when field is full
+- [ ] Desktop: "Forgot password?" text and link completely removed
+- [ ] Desktop: Terms of Service and Privacy Policy text still visible
+- [ ] Mobile: Same eye icon behaviour as desktop
+- [ ] Mobile: "Forgot password?" text and link completely removed
+- [ ] Mobile: Terms of Service and Privacy Policy text still visible
+- [ ] Login functionality unchanged — email/password login works normally
+#### Task Assignment
+- [ ] Manager opens Assign Task dialog and clicks Assign without selecting anyone: red border on Assign To + error message
+- [ ] Manager selects a user: error clears immediately
+- [ ] Manager submits with assignee selected + title + description: task created normally
+- [ ] Error state resets when dialog is closed and reopened
+- [ ] Description validation (from previous prompt) still works independently
+- [ ] Title still blocks via disabled button
+- [ ] EMPLOYEE and LEAD creating their own task (no assign-to field): no regression
+
+## [2026-07-15] Tasks UI/UX Improvements (U-T1 through U-T5)
+### Status: Completed
+### Actual Changes Made
+- U-T1 (Archive): Added `handleArchiveTask` that sets status to "archived" via `tasksAPI.updateTask`. Active tasks pre-filtered to exclude archived. Archive button appears in View Details for task assigners when task is still "todo". Requires `archived` status support in DB CHECK constraint.
+- U-T2 (Assignment date): Employees see "Assigned MMM d" date on task cards using `task.createdAt` with `format()`.
+- U-T3 (Hide disabled Submit): Disabled Submit for Review button variants removed. Button only renders when the action is actually available (phased: all milestones done + in_progress; non-phased: canSubmit).
+- U-T4 (Remove redundant Start Milestone): Added `hasInProgress` check — Start Milestone button hidden when a milestone is already running.
+- U-T5 (Confirmation messages): Start task toast updated to "Task started! Progress is set to 15%. Keep it up!". Start milestone toast updated to "Milestone started! This milestone is now in progress. Submit for review when done."
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+### Verification
+- [ ] Task with no active milestone: "Start Milestone" visible in modal footer
+- [ ] Task with in-progress milestone: "Start Milestone" button hidden
+- [ ] Starting a task: toast shows "Task started! Progress is set to 15%. Keep it up!"
+- [ ] Starting a milestone: toast shows "Milestone started! Submit for review when done."
+- [ ] Employee view: task cards show "Assigned MMM d" date
+- [ ] Manager view: assignment date NOT shown (manager already sees all dates)
+- [ ] Non-actionable Submit for Review: button completely hidden (not disabled)
+- [ ] Actionable Submit for Review: primary blue button shown as before
+- [ ] Manager on todo task they assigned: Archive Task button in View Details
+- [ ] After archiving: task disappears from all active tabs
+- [ ] Archived tasks do not appear in any tab (All, To Do, etc.)
+- [ ] LEAD/EMPLOYEE cannot archive (only assigner can)
+
+## [2026-07-15] Vault UI/UX Improvements (U-V1 through U-V5)
+### Status: Completed
+### Actual Changes Made
+- U-V1/V2: File input redesigned with hidden `<input>` + custom label. Filename shown once in truncated span. Removed duplicate filename `<p>` tag.
+- U-V3: Document download button now shows filename (truncated) separately from file size, both always visible.
+- U-V4: Category badges updated to higher-contrast colors — blue/amber/red/slate tints with brighter text.
+- U-V5: Sensitive value reveal section now uses a fixed `min-h-[40px]` container — hidden state shows `••••••••` placeholder at same height as revealed state, preventing card shift.
+### Files Touched
+- `app/(workspace)/vault/page.tsx`
+- `supabase/CHANGES.md`
+### Verification
+- [ ] File input in Add dialog: shows "Choose File" button + filename separately, not twice
+- [ ] Spacing between button and filename is clean
+- [ ] Long document name on card: name truncates, file size stays visible
+- [ ] Category badges visually distinct and legible on dark card backgrounds
+- [ ] Revealing a sensitive value: card height does not shift
+- [ ] Hiding a sensitive value: card height stays the same, shows dot placeholder
+
+## [2026-07-15] B-04/B-05/B-06/B-07: Milestone Bugs — Resubmission, Validation, Weights
+### Status: Completed
+### B-06: Root Cause
+`submitMilestoneReview` in `lib/api.ts` validated `milestone.status !== "in_progress"` and threw immediately for any other status. Rejected milestones have status `needs_revision` — the API blocked all resubmission attempts even though the UI "Resubmit" button existed.
+### B-04: Root Cause
+Milestone submission had no file requirement. QA confirmed a document should be mandatory on employee milestone submissions.
+### B-05: Root Cause
+Milestone rejection had no comment validation. Chief could reject without explaining what needs fixing.
+### B-07: Root Cause
+`handleEditMilestone` saved weight values without checking if all milestone weights summed to 100%.
+### Actual Changes Made
+- `lib/api.ts` `submitMilestoneReview`: Changed status check to accept `in_progress` OR `needs_revision`.
+- `app/(workspace)/tasks/page.tsx` `handleSubmitMilestoneReview`: Added file requirement check with toast.
+- Milestone dialog description updated to indicate document is required for submission.
+- Milestone dialog FileDropZone for submit action: changed to `required` tint.
+- `handleRejectMilestone`: Added empty comment validation with toast.
+- Reject & Return button: disabled when `milestoneComment` is empty.
+- `handleEditMilestone`: Added weight sum validation before saving. Blocks save if total ≠ 100%.
+### Files Touched
+- `lib/api.ts` — submitMilestoneReview status check
+- `app/(workspace)/tasks/page.tsx` — handleSubmitMilestoneReview, handleRejectMilestone, handleEditMilestone, milestone dialog UI
+- `supabase/CHANGES.md`
+### Verification
+- [ ] Milestone rejected → employee can click Resubmit → dialog opens → submit succeeds
+- [ ] Milestone resubmission with comment only: succeeds (document required message shows if no file)
+- [ ] Milestone resubmission with file: succeeds and goes back to pending_review
+- [ ] Milestone first submission without file: blocked with toast
+- [ ] Milestone first submission with file: succeeds
+- [ ] Milestone rejection without comment: Reject & Return button disabled
+- [ ] Milestone rejection with comment: button enabled, rejection succeeds
+- [ ] Edit milestone weight summing to exactly 100%: saves
+- [ ] Edit milestone weight summing to 95%: blocked with toast showing current total
+- [ ] Edit milestone weight summing to 110%: blocked with toast
+
+## [2026-07-15] B-02/B-03/B-08/B-09: Comment Visibility + Rejection Feedback Required
+### Status: Completed
+### Root Cause (B-02, B-08, B-09)
+`detailTask` state was set once on modal open and never refreshed after review actions completed. `fetchTasks()` updated the main `tasks` array but `detailTask` remained stale — `reviewNotes` and `reviewAssignerNotes` always showed the pre-submission values.
+### Root Cause (B-03)
+The Reject & Return button had no `disabled` condition checking for empty feedback. Chief could reject a completion review without explaining why.
+### Actual Changes Made
+- Added `refreshDetailTask()` helper — re-fetches all tasks and syncs `detailTask` from the fresh array.
+- `handleSubmitProgressReview`, `handleAssignerReviewProgress`, `handleApproveCompletion`, `handleRejectCompletion`: all now call `refreshDetailTask()` instead of bare `fetchTasks()` so `detailTask` updates immediately.
+- Reject & Return button: `disabled` when `assignerNotes` is empty. Helper text displayed under Feedback field for reject action.
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+### Verification
+- [ ] Employee submits progress review: View Details immediately shows submitted comment
+- [ ] Chief reviews progress (sets %): View Details shows updated assigner notes
+- [ ] Chief approves completion: View Details shows approval notes (not previous review comment)
+- [ ] Chief rejects completion: View Details shows rejection notes
+- [ ] Milestone approval/rejection comments visible after action
+- [ ] Reject & Return button disabled when feedback textarea is empty
+- [ ] Reject & Return button enabled once feedback is typed
+- [ ] Helper text "Feedback is required when rejecting" appears in reject mode only
+- [ ] Approve path unaffected (no feedback required)
+
+## [2026-07-15] B-01: Vault — Require Sensitive Value Field
+### Status: Completed
+### Root Cause
+`handleSave` only validated `form.title`. The `text_value` field (Password / API Key / Value) had no validation — users could create vault entries with an empty sensitive value.
+### Actual Changes Made
+- Added `textValueError` state.
+- `handleSave` validates `text_value` for all non-document categories before saving.
+- Sensitive Value Textarea renders with red border + inline error message when empty on submit.
+- Label updated with red asterisk.
+- Error resets when user types or form resets.
+### Files Touched
+- `app/(workspace)/vault/page.tsx`
+- `supabase/CHANGES.md`
+### Verification
+- [ ] Creating a password entry with empty password field: blocked, red border + error shown
+- [ ] Creating an API key entry with empty value: blocked
+- [ ] Creating a "other" entry with empty value: blocked
+- [ ] Creating a document entry with no file: existing validation still works
+- [ ] Filling in value and saving: works normally
+- [ ] Editing an existing item: no regression (edit path doesn't require text_value re-entry)
+
+## [2026-07-15] Tasks Page — cPanel Full Visibility + My Tasks Filter + Mandatory Description
+### Status: Completed
+### Change 1: cPanel Accounts View All Tasks (Read-Only for Unowned Tasks)
+#### Root Cause
+CEO/C_LEVEL `getUserTasks()` was filtered to only return tasks they assigned or were assigned to. They had no visibility into tasks distributed by other managers to other employees.
+#### Actual Changes Made
+- `lib/api.ts` `getUserTasks()`: Removed the OR filter for CEO/C_LEVEL. They now receive all tasks with no row restriction. UI layer enforces read-only for foreign tasks.
+- `app/(workspace)/tasks/page.tsx`: Added `isCLevel` constant (`CEO || C_LEVEL`).
+- Added `canInteractWithTask(task)` helper — returns `false` for cPanel users on tasks where they are neither assigner nor assignee.
+- Task card: Submit for Review button group wrapped in `canInteractWithTask(task) && isAssignee(task)`.
+- View Details modal: All action buttons (Start Task, Start Milestone, Submit for Review, Review Progress, Approve, Reject) wrapped in `canInteractWithTask(detailTask)`. Info-only content (progress ring, description, milestones view, notes, files) left ungated.
+### Change 2: "My Tasks" Tab for cPanel Users
+#### Actual Changes Made
+- `TAB_LABELS` conditionally spreads `my_tasks: "My Tasks"` when `isCLevel` is true. Tab is invisible to LEAD and EMPLOYEE roles.
+- `getTasksByStatus()` extended to handle `"my_tasks"` key — filters by `assignedBy === user.id` OR `viewerIds.includes(user.id)`.
+### Change 3: Mandatory Description with Inline Validation
+#### Root Cause
+Description was already blocking submission via `disabled` condition but gave no visual signal to the user about why the button was unresponsive.
+#### Actual Changes Made
+- Added `descriptionError` state.
+- `handleCreateTask` validates description at top of function — sets error state and returns early if empty.
+- Description Textarea: red border + inline "Description is required." message when `descriptionError` is true. Error clears as user types.
+- Label updated with red asterisk to signal required status.
+- Dialog `onOpenChange` resets error on close.
+- Submit button `disabled` condition: removed `!newTask.description` (moved to handler); `!newTask.title` unchanged.
+### Files Touched
+- `lib/api.ts` — getUserTasks CEO/C_LEVEL query branch
+- `app/(workspace)/tasks/page.tsx` — isCLevel, canInteractWithTask, TAB_LABELS, getTasksByStatus, descriptionError state, handleCreateTask validation, Textarea UI, Dialog onOpenChange, button disabled condition
+- `supabase/CHANGES.md` — this entry
+### Verification
+- [ ] CEO/C_LEVEL: all system tasks visible on taskboard
+- [ ] CEO/C_LEVEL on own assigned task: all buttons functional, unchanged behavior
+- [ ] CEO/C_LEVEL on foreign task card: only "View Details" visible, no submit buttons
+- [ ] CEO/C_LEVEL in View Details of foreign task: info visible, no action buttons
+- [ ] LEAD/EMPLOYEE: task visibility unchanged — only their own tasks
+- [ ] LEAD/EMPLOYEE: no "My Tasks" tab visible
+- [ ] CEO/C_LEVEL: "My Tasks" tab appears in tab bar
+- [ ] "My Tasks" tab: shows tasks they assigned + tasks they are a viewer on
+- [ ] "My Tasks" tab: does NOT show unrelated foreign tasks
+- [ ] All other tabs (All, To Do, In Progress, Review, Final, Done) unchanged for all roles
+- [ ] Submit with empty description: red border + error message shown, form blocked
+- [ ] Type in description: error clears immediately
+- [ ] Close and reopen dialog: no stale error shown
+- [ ] Submit with description filled: submits normally
+- [ ] Title field: still blocks via disabled button (no regression)
+- [ ] Full task lifecycle (start, submit, review, approve, reject) unchanged for all roles
+
+## [2026-07-07] Fix Mobile Login Page — Two Columns Rendering Simultaneously
+
+### Status: Completed
+
+### Root Cause
+The desktop right panel (form section) was `flex w-full md:w-1/2` — it rendered on ALL screen sizes, including mobile. The mobile-specific stacked layout (`md:hidden`) was a separate sibling div. On screens below the `md` breakpoint, both the desktop form panel AND the mobile layout rendered side-by-side inside the parent flex container, each at `w-full` trying to share the row — producing the cramped two-column appearance.
+
+### Actual Changes Made
+- Added `hidden` to the desktop right panel: `hidden md:flex` — now it only renders at the `md` breakpoint and above
+- Desktop two-column layout untouched — left panel already had `hidden md:flex`, right panel now matches
+
+### Files Touched
+- `app/login/page.tsx` — one className change on the desktop form panel
+- `supabase/CHANGES.md` — this entry
+
+### Verification
+- [ ] Mobile (375px, 390px, 428px): single clean full-width column
+- [ ] Desktop (1024px+): two-column layout unchanged
+- [ ] No duplicated form fields on mobile
+- [ ] Logo, Welcome Back, inputs, button, links all visible and functional on mobile
+- [ ] Branding panel with video visible on desktop, not on mobile
+
+---
+
 ## [2026-07-07] Fix Approve Completion Modal Not Closing
 
 ### Status: Completed

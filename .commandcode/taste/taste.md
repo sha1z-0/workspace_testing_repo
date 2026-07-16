@@ -15,6 +15,8 @@
 # workflow
 - For every change: add a Planned entry to supabase/CHANGES.md before starting, then update it to Completed with actual changes and files touched after implementation. Confidence: 0.85
 - Write out a full context/state summary and intended fix plan before making any code changes — never code before planning. Confidence: 0.75
+- Before starting new work, read all project documentation files (.md) and understand the full change history from previous sessions. Confidence: 0.70
+- Provide implementation prompts with exact file paths, line numbers, find/replace code snippets, and verification checklists — leave no room for ambiguity in what to change. Confidence: 0.65
 
 # supabase
 - When writing SQL migrations that change CHECK constraint values, the correct order is: DROP the old constraint → UPDATE existing rows to valid new values → ADD the new constraint. Updating rows before dropping the old constraint can fail because the new value may not be valid under the old constraint either. Confidence: 0.80

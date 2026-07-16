@@ -589,7 +589,8 @@ export const tasksAPI = {
       // LEAD: tasks they assigned + tasks assigned TO them
       // EMPLOYEE/Viewers: only tasks assigned TO them or they can view
       if (userRole && ['CEO', 'C_LEVEL'].includes(userRole)) {
-        query = query.or(`assigned_by.eq.${userId},and(assignee_ids.cs.{${userId}},assigned_by.not.eq.${userId})`)
+        // CEO/C_LEVEL see ALL tasks system-wide.
+        // Read-only enforcement for foreign tasks is handled in the UI layer.
       } else if (userRole === 'LEAD') {
         query = query.or(`assigned_by.eq.${userId},assignee_ids.cs.{${userId}}`)
       } else {
@@ -775,15 +776,20 @@ export const tasksAPI = {
         const milestoneCount = milestones.length
         const evenWeight = Math.floor(100 / milestoneCount)
         const remainder = 100 - evenWeight * milestoneCount
-        const milestoneInserts = milestones.map((m, i) => ({
-          task_id: task.id,
-          title: m.title,
-          description: m.description || '',
-          order_index: i,
-          weight: m.weight ?? (evenWeight + (i === 0 ? remainder : 0)),
-          due_date: m.dueDate ? new Date(m.dueDate).toISOString() : null,
-          status: 'not_started'
-        }))
+        const milestoneInserts = milestones.map((m, i) => {
+          const milestoneDueDatetime = m.dueDate && m.dueTime 
+            ? new Date(`${m.dueDate}T${m.dueTime}:00`).toISOString() 
+            : m.dueDate ? new Date(`${m.dueDate}T23:59:59`).toISOString() : null
+          return {
+            task_id: task.id,
+            title: m.title,
+            description: m.description || '',
+            order_index: i,
+            weight: m.weight ?? (evenWeight + (i === 0 ? remainder : 0)),
+            due_datetime: milestoneDueDatetime,
+            status: 'not_started'
+          }
+        })
         const { error: milestonesError } = await supabase.from("task_milestones").insert(milestoneInserts)
         if (milestonesError) {
           const errStr = JSON.stringify(milestonesError, Object.getOwnPropertyNames(milestonesError))
@@ -931,6 +937,26 @@ export const tasksAPI = {
       return data
     } catch (error) {
       console.error("Error toggling submission:", error)
+      throw error
+    }
+  },
+
+  toggleMilestoneSubmission: async (milestoneId: string, open: boolean) => {
+    try {
+      const { data, error } = await supabase
+        .from("task_milestones")
+        .update({
+          submission_open: open,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", milestoneId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error("Error toggling milestone submission:", error)
       throw error
     }
   },
@@ -1205,9 +1231,14 @@ export const tasksAPI = {
 
   submitMilestoneReview: async (milestoneId: string, comment: string, file?: File, userId?: string) => {
     // Enforce sequential ordering — can only submit the current in-progress milestone
-    const { data: milestone } = await supabase.from("task_milestones").select("task_id, order_index, status").eq("id", milestoneId).single()
+    const { data: milestone } = await supabase.from("task_milestones").select("task_id, order_index, status, submission_open").eq("id", milestoneId).single()
     if (!milestone) throw new Error("Milestone not found")
-    if (milestone.status !== "in_progress") throw new Error("This milestone is not in progress.")
+    if (milestone.submission_open === false) {
+      throw new Error("The submission deadline for this milestone has been closed by the assigner.")
+    }
+    if (milestone.status !== "in_progress" && milestone.status !== "needs_revision") {
+      throw new Error("This milestone cannot be submitted in its current state.")
+    }
     const { data: allMilestones } = await supabase.from("task_milestones").select("order_index, status").eq("task_id", milestone.task_id).order("order_index")
     if (allMilestones) {
       const hasEarlierPending = allMilestones.some(m => m.order_index < milestone.order_index && m.status !== "approved")
@@ -1309,23 +1340,28 @@ export const tasksAPI = {
     return data.every(m => m.status === "approved")
   },
 
-  updateMilestone: async (id: string, dataUpdates: Partial<{ title: string; description: string; weight: number; status: string; due_date: string }>) => {
+  updateMilestone: async (id: string, dataUpdates: Partial<{ title: string; description: string; weight: number; status: string; due_datetime: string; submission_open: boolean }>) => {
     const updateData: any = { ...dataUpdates, updated_at: new Date().toISOString() }
     const { data, error } = await supabase.from("task_milestones").update(updateData).eq("id", id).select().single()
     if (error) throw error
     return data
   },
 
-  addMilestone: async (taskId: string, milestone: { title: string; description?: string; dueDate?: string; weight?: number }) => {
+  addMilestone: async (taskId: string, milestone: { title: string; description?: string; dueDate?: string; dueTime?: string; weight?: number }) => {
     const { data: existing } = await supabase.from("task_milestones").select("*").eq("task_id", taskId).order("order_index")
     const newIndex = existing ? existing.length : 0
+
+    const milestoneDueDatetime = milestone.dueDate && milestone.dueTime 
+      ? new Date(`${milestone.dueDate}T${milestone.dueTime}:00`).toISOString() 
+      : milestone.dueDate ? new Date(`${milestone.dueDate}T23:59:59`).toISOString() : null
+
     const insertPayload: any = {
       task_id: taskId,
       title: milestone.title,
       description: milestone.description || '',
+      due_datetime: milestoneDueDatetime,
       order_index: newIndex,
-      weight: milestone.weight ?? 0,
-      due_date: milestone.dueDate ? new Date(milestone.dueDate).toISOString() : null,
+      weight: milestone.weight || 0,
       status: 'not_started'
     }
     const { data, error } = await supabase.from("task_milestones").insert(insertPayload).select().single()

@@ -42,6 +42,7 @@ export default function VaultPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [revealedItems, setRevealedItems] = useState<Set<string>>(new Set())
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [textValueError, setTextValueError] = useState(false)
 
   const [form, setForm] = useState({
     title: "",
@@ -79,6 +80,7 @@ export default function VaultPage() {
     setUploadFile(null)
     setIsEditing(false)
     setEditItemId(null)
+    setTextValueError(false)
   }
 
   const handleOpenEdit = (item: VaultItem) => {
@@ -95,6 +97,12 @@ export default function VaultPage() {
 
   const handleSave = async () => {
     if (!user || !form.title) return
+    // Require text_value for non-document categories
+    if (form.category !== "document" && !form.text_value.trim()) {
+      setTextValueError(true)
+      return
+    }
+    setTextValueError(false)
     try {
       setIsSaving(true)
       if (isEditing && editItemId) {
@@ -164,10 +172,10 @@ export default function VaultPage() {
 
   const getCategoryBadge = (category: string) => {
     switch (category) {
-      case "document": return <Badge variant="outline" className="bg-blue-100/50 border-blue-300 text-blue-700"><FileText className="mr-1 h-3 w-3" />Document</Badge>
-      case "api_key": return <Badge variant="outline" className="bg-amber-100/50 border-amber-300 text-amber-700"><Key className="mr-1 h-3 w-3" />API Key</Badge>
-      case "password": return <Badge variant="outline" className="bg-red-100/50 border-red-300 text-red-700"><Lock className="mr-1 h-3 w-3" />Password</Badge>
-      case "other": return <Badge variant="outline" className="bg-slate-100/50 border-slate-300 text-slate-700"><Shield className="mr-1 h-3 w-3" />Other</Badge>
+      case "document": return <Badge variant="outline" className="bg-blue-500/15 border-blue-400/40 text-blue-300 font-medium"><FileText className="mr-1 h-3 w-3" />Document</Badge>
+      case "api_key": return <Badge variant="outline" className="bg-amber-500/15 border-amber-400/40 text-amber-300 font-medium"><Key className="mr-1 h-3 w-3" />API Key</Badge>
+      case "password": return <Badge variant="outline" className="bg-red-500/15 border-red-400/40 text-red-300 font-medium"><Lock className="mr-1 h-3 w-3" />Password</Badge>
+      case "other": return <Badge variant="outline" className="bg-slate-500/15 border-slate-400/40 text-slate-300 font-medium"><Shield className="mr-1 h-3 w-3" />Other</Badge>
       default: return null
     }
   }
@@ -305,11 +313,17 @@ export default function VaultPage() {
                         )}
 
                         {item.category === "document" && item.file_url && (
-                          <Button variant="outline" size="sm" onClick={() => handleDownload(item)} className="gap-1.5 text-xs h-8">
-                            <Download className="h-3.5 w-3.5" />
-                            {item.file_name || "Download"}
-                            {item.file_size ? ` (${(item.file_size / 1024 / 1024).toFixed(1)} MB)` : ""}
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => handleDownload(item)} className="gap-1.5 text-xs h-8 max-w-[160px]">
+                              <Download className="h-3.5 w-3.5 flex-shrink-0" />
+                              <span className="truncate">{item.file_name || "Download"}</span>
+                            </Button>
+                            {item.file_size && (
+                              <span className="text-[11px] text-muted-foreground flex-shrink-0">
+                                {(item.file_size / 1024 / 1024).toFixed(1)} MB
+                              </span>
+                            )}
+                          </div>
                         )}
 
                         {(item.category === "api_key" || item.category === "password") && item.text_value && (
@@ -330,24 +344,29 @@ export default function VaultPage() {
                               {revealedItems.has(item.id) ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                               {revealedItems.has(item.id) ? "Hide" : "Click to Reveal"}
                             </Button>
-                            {revealedItems.has(item.id) && (
-                              <div className="relative">
-                                <code className="block text-xs bg-slate-100 dark:bg-slate-800 p-2 rounded border break-all pr-8 font-mono">
-                                  {item.text_value}
-                                </code>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute top-1 right-1 h-6 w-6"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(item.text_value || "")
-                                    toast({ title: "Copied", description: "Value copied to clipboard." })
-                                  }}
-                                >
-                                  <Eye className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            )}
+                            {/* Fixed-height container prevents layout shift */}
+                            <div className="relative min-h-[40px]">
+                              {revealedItems.has(item.id) ? (
+                                <div className="relative">
+                                  <code className="block text-xs bg-slate-100 dark:bg-slate-800 p-2 rounded border break-all pr-8 font-mono">
+                                    {item.text_value}
+                                  </code>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute top-1 right-1 h-6 w-6"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(item.text_value || "")
+                                      toast({ title: "Copied", description: "Value copied to clipboard." })
+                                    }}
+                                  >
+                                    <Eye className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="text-xs text-muted-foreground/40 select-none p-2">••••••••••••</div>
+                              )}
+                            </div>
                           </div>
                         )}
 
@@ -410,24 +429,49 @@ export default function VaultPage() {
             </div>
             {form.category === "document" && !isEditing && (
               <div className="grid gap-2">
-                <Label htmlFor="file">Upload File (max 10MB)</Label>
-                <Input
+                <Label htmlFor="file">Upload File <span className="text-red-500">*</span></Label>
+                <div className="flex items-center gap-3">
+                  <label htmlFor="file" className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-input bg-background text-sm font-medium hover:bg-accent transition-colors">
+                    <FileText className="h-4 w-4" />
+                    Choose File
+                  </label>
+                  {uploadFile && (
+                    <span className="text-sm text-muted-foreground truncate max-w-[200px]" title={uploadFile.name}>
+                      {uploadFile.name}
+                    </span>
+                  )}
+                  {!uploadFile && (
+                    <span className="text-sm text-muted-foreground">No file chosen</span>
+                  )}
+                </div>
+                <input
                   id="file"
                   type="file"
+                  className="hidden"
                   accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif"
                   onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
                 />
-                {uploadFile && (
-                  <p className="text-xs text-muted-foreground">{uploadFile.name} ({(uploadFile.size / 1024 / 1024).toFixed(2)} MB)</p>
-                )}
               </div>
             )}
             {form.category !== "document" && (
               <div className="grid gap-2">
                 <Label htmlFor="text_value">
                   {form.category === "password" ? "Password" : form.category === "api_key" ? "API Key" : "Value"}
+                  <span className="text-red-500 ml-1">*</span>
                 </Label>
-                <Textarea id="text_value" value={form.text_value} onChange={(e) => setForm({ ...form, text_value: e.target.value })} placeholder="Sensitive value..." />
+                <Textarea
+                  id="text_value"
+                  value={form.text_value}
+                  onChange={(e) => {
+                    setForm({ ...form, text_value: e.target.value })
+                    if (e.target.value.trim()) setTextValueError(false)
+                  }}
+                  placeholder="Sensitive value (required)"
+                  className={textValueError ? "border-red-500/60" : ""}
+                />
+                {textValueError && (
+                  <p className="text-xs text-red-500 mt-1">This field is required.</p>
+                )}
                 <p className="text-xs text-muted-foreground">This value will be hidden by default in the vault.</p>
               </div>
             )}
