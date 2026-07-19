@@ -1027,7 +1027,7 @@ export const tasksAPI = {
         .from("tasks")
         .update({
           status: "in_progress",
-          progress: isPhased ? 0 : 15,
+          progress: 0,
           start_date: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -1092,7 +1092,7 @@ export const tasksAPI = {
     } catch (error) { console.error("Error reviewing progress:", error); throw error }
   },
 
-  submitCompletionReview: async (id: string, fileUrl: string, fileName: string, fileSize: number) => {
+  submitCompletionReview: async (id: string, fileUrl: string, fileName: string, fileSize: number, notes?: string) => {
     if (!fileUrl) throw new Error("File attachment is required for completion review.")
 
     // Gate: if milestone-based task, all milestones must be approved
@@ -1111,6 +1111,7 @@ export const tasksAPI = {
           submission_file_name: fileName,
           submission_file_size: fileSize,
           submission_status: "submitted",
+          review_notes: notes || null,
           updated_at: new Date().toISOString()
         })
         .eq("id", id)
@@ -1129,7 +1130,7 @@ export const tasksAPI = {
     return { fileUrl: result.url, fileName: result.name, fileSize: result.size }
   },
 
-  approveCompletion: async (id: string, approverId: string, reviewerFile?: { url: string; name: string; size: number }) => {
+  approveCompletion: async (id: string, approverId: string, reviewerFile?: { url: string; name: string; size: number }, notes?: string) => {
     try {
       const updateData: any = {
         status: "completed", progress: 100,
@@ -1137,6 +1138,7 @@ export const tasksAPI = {
         approved_at: new Date().toISOString(),
         approved_by: approverId,
         submission_open: false,
+        review_assigner_notes: notes || null,
         updated_at: new Date().toISOString()
       }
       if (reviewerFile) {

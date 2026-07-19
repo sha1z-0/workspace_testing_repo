@@ -283,8 +283,8 @@ export default function VaultPage() {
                 </motion.div>
               ) : (
                 filteredItems.map((item) => (
-                  <motion.div key={item.id} variants={itemVariants} layoutId={item.id}>
-                    <Card className="group relative overflow-hidden border border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
+                  <motion.div key={item.id} variants={itemVariants} layoutId={item.id} className="h-full">
+                    <Card className="h-full flex flex-col group relative overflow-hidden border border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
                       <CardHeader className="pb-3 pt-5">
                         <div className="flex items-start justify-between">
                           <div className="space-y-2 flex-1 min-w-0">
@@ -307,10 +307,12 @@ export default function VaultPage() {
                           </div>
                         </div>
                       </CardHeader>
-                      <CardContent className="pb-4 pt-0">
-                        {item.description && (
-                          <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{item.description}</p>
-                        )}
+                      <CardContent className="pb-4 pt-0 flex flex-col flex-1">
+                        <div className="min-h-[36px] mb-3">
+                          {item.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
+                          )}
+                        </div>
 
                         {item.category === "document" && item.file_url && (
                           <div className="flex items-center gap-2">
@@ -370,13 +372,15 @@ export default function VaultPage() {
                           </div>
                         )}
 
-                        {item.category === "other" && item.text_value && (
-                          <div className="text-xs text-muted-foreground bg-slate-50 dark:bg-slate-800/50 p-2 rounded border line-clamp-3">
-                            {item.text_value}
-                          </div>
-                        )}
+                        <div className="min-h-[52px]">
+                          {item.category === "other" && item.text_value && (
+                            <div className="text-xs text-muted-foreground bg-slate-50 dark:bg-slate-800/50 p-2 rounded border line-clamp-3">
+                              {item.text_value}
+                            </div>
+                          )}
+                        </div>
 
-                        <div className="mt-3 text-[10px] text-muted-foreground">
+                        <div className="mt-auto pt-3 text-[10px] text-muted-foreground">
                           Added by {item.created_by_name || item.created_by} · {new Date(item.created_at).toLocaleDateString()}
                         </div>
                       </CardContent>

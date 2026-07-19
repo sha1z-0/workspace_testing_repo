@@ -183,6 +183,7 @@ export default function TasksPage() {
       setIsMilestoneSubmitting(true)
       await tasksAPI.submitMilestoneReview(milestoneDialogId, milestoneComment, milestoneFile || undefined, user?.id)
       if (detailTask) { const m = await tasksAPI.getTaskMilestones(detailTask.id); setMilestones(m) }
+      await fetchTasks()
       setMilestoneDialogOpen(false); setMilestoneComment(""); setMilestoneFile(null)
       toast({ title: "Milestone submitted for review" })
     } catch (error: any) { toast({ title: "Error", description: error?.message, variant: "destructive" }) }
@@ -211,6 +212,7 @@ export default function TasksPage() {
       setIsMilestoneSubmitting(true)
       await tasksAPI.rejectMilestone(milestoneDialogId, milestoneComment, user!.id, milestoneFile || undefined, user?.id)
       if (detailTask) { const m = await tasksAPI.getTaskMilestones(detailTask.id); setMilestones(m) }
+      await fetchTasks()
       setMilestoneDialogOpen(false); setMilestoneComment(""); setMilestoneFile(null)
       toast({ title: "Milestone returned for revision" })
     } catch (error: any) { toast({ title: "Error", description: error?.message, variant: "destructive" }) }
@@ -359,6 +361,16 @@ export default function TasksPage() {
       return
     }
     setDueTimeError(false)
+    // Validate: combined datetime must not be in the past
+    const constructedDt = new Date(`${newTask.dueDate}T${newTask.dueTime}:00`)
+    if (constructedDt < new Date()) {
+      toast({
+        title: "Invalid due date/time",
+        description: "The due date and time cannot be in the past.",
+        variant: "destructive"
+      })
+      return
+    }
     try {
       setIsAddingTask(true)
       const assigneeIds = isManager && newTask.assigneeIds.length > 0 ? newTask.assigneeIds : [user.id]
@@ -411,7 +423,7 @@ export default function TasksPage() {
         title: isPhased ? "Milestone started!" : "Task started!",
         description: isPhased
           ? "Your first milestone is now in progress. Good luck!"
-          : "Progress is set to 15%. Keep it up!"
+          : "Task is now in progress. Submit a progress update when ready."
       })
       setDetailDialogOpen(false)
     } catch (error: any) {
@@ -450,7 +462,7 @@ export default function TasksPage() {
     try {
       setIsReviewSubmitting(true)
       const { fileUrl, fileName, fileSize } = await tasksAPI.uploadCompletionFile(reviewTaskId, reviewFile, user!.id)
-      await tasksAPI.submitCompletionReview(reviewTaskId, fileUrl, fileName, fileSize)
+      await tasksAPI.submitCompletionReview(reviewTaskId, fileUrl, fileName, fileSize, reviewNotes)
       await refreshDetailTask()
       setReviewDialogOpen(false); setReviewFile(null); setReviewNotes(""); setReviewTaskId(null)
       toast({ title: "Completion submitted", description: "The assigner will review your work." })
@@ -485,7 +497,7 @@ export default function TasksPage() {
       if (assignerFile) {
         reviewerFile = await tasksAPI.uploadReviewerFile(taskId, assignerFile, user!.id)
       }
-      await tasksAPI.approveCompletion(taskId, user!.id, reviewerFile)
+      await tasksAPI.approveCompletion(taskId, user!.id, reviewerFile, assignerNotes)
       await refreshDetailTask()
       setAssignerReviewOpen(false); setAssignerFile(null)
       toast({ title: "Task completed", description: "The task has been marked complete." })
@@ -596,6 +608,13 @@ export default function TasksPage() {
         (t.viewerIds && t.viewerIds.includes(user?.id || ""))
       )
     }
+    if (status === "archived") {
+      // Read from raw tasks (activeTasks excludes archived)
+      return tasks.filter(t =>
+        (t as any).status === "archived" &&
+        (isAssigner(t) || isAssignee(t))
+      )
+    }
     return status === "all" ? sortedTasks : sortedTasks.filter(t => t.status === status)
   }
 
@@ -621,7 +640,11 @@ export default function TasksPage() {
     pending_review: "Review",
     pending_completion_review: "Final",
     completed: "Done",
+    ...(isManager ? { archived: "Archived" } : {}),
   }
+
+  const todayStr = new Date().toISOString().split('T')[0]
+  const nowTimeStr = new Date().toTimeString().slice(0, 5)
 
   return (
     <div className="min-h-screen p-1 space-y-6" style={{ background: "#0B0F1A" }}>
@@ -687,8 +710,13 @@ export default function TasksPage() {
                   <Label className="text-[13px] text-[#CBD5E1]">Due Date <span className="text-red-400">*</span></Label>
                   <Input
                     type="date"
+                    min={todayStr}
                     value={newTask.dueDate}
-                    onChange={(e) => { setNewTask({ ...newTask, dueDate: e.target.value }); setDueDateError(false) }}
+                    onChange={(e) => {
+                      setNewTask({ ...newTask, dueDate: e.target.value, dueTime: "" })
+                      setDueDateError(false)
+                      setDueTimeError(false)
+                    }}
                     className={`bg-[#0B0F1A] text-[#F1F5F9] rounded-[10px] h-10 text-[14px] color-scheme-dark transition-colors ${dueDateError ? 'border-red-500/60' : 'border-white/[0.08]'}`}
                   />
                   {dueDateError && (
@@ -721,6 +749,7 @@ export default function TasksPage() {
                   <Label className="text-[13px] text-[#CBD5E1]">Due Time <span className="text-red-400">*</span></Label>
                   <Input
                     type="time"
+                    min={newTask.dueDate === todayStr ? nowTimeStr : undefined}
                     value={newTask.dueTime}
                     onChange={(e) => { setNewTask({ ...newTask, dueTime: e.target.value }); setDueTimeError(false) }}
                     className={`bg-[#0B0F1A] text-[#F1F5F9] rounded-[10px] h-10 text-[14px] color-scheme-dark transition-colors ${dueTimeError ? 'border-red-500/60' : 'border-white/[0.08]'}`}
@@ -759,8 +788,9 @@ export default function TasksPage() {
                             <Input placeholder={`Milestone ${i + 1} title`} value={m.title} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], title: e.target.value }; setNewTask({ ...newTask, milestones: ms }) }} className="h-8 text-[13px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px]" />
                             <Input placeholder="Description" value={m.description || ""} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], description: e.target.value }; setNewTask({ ...newTask, milestones: ms }) }} className="h-7 text-[12px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px]" />
                             <div className="flex gap-2">
-                              <Input type="date" value={m.dueDate || ""} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], dueDate: e.target.value }; setNewTask({ ...newTask, milestones: ms }) }} className="h-7 text-[12px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] color-scheme-dark" placeholder="Due date" />
-                              <Input type="time" value={m.dueTime || ""} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], dueTime: e.target.value }; setNewTask({ ...newTask, milestones: ms }) }} className="h-7 text-[12px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] color-scheme-dark" placeholder="Due time" />
+                              <Input type="date" min={todayStr} value={m.dueDate || ""} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], dueDate: e.target.value, dueTime: "" }; setNewTask({ ...newTask, milestones: ms }) }} className="h-7 text-[12px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] color-scheme-dark" placeholder="Due date" />
+                              <Input type="time" min={m.dueDate === todayStr ? nowTimeStr : undefined} value={m.dueTime || ""} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], dueTime: e.target.value }; setNewTask({ ...newTask, milestones: ms }) }} className="h-7 text-[12px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] color-scheme-dark" placeholder="Due time" />
+                            </div>
                             </div>
                           </div>
                           {newTask.milestones.length > 1 && (
@@ -827,7 +857,13 @@ export default function TasksPage() {
             key={key}
             type="button"
             onClick={() => setActiveTab(key)}
-            className={`px-3.5 py-1.5 rounded-[10px] text-[13px] font-medium transition-colors ${activeTab === key ? "bg-white/10 text-[#F1F5F9]" : "text-[#64748B] hover:text-[#CBD5E1]"}`}
+            className={`px-3.5 py-1.5 rounded-[10px] text-[13px] font-medium transition-colors ${
+              activeTab === key
+                ? key === "archived"
+                  ? "bg-amber-500/10 text-amber-400"
+                  : "bg-white/10 text-[#F1F5F9]"
+                : "text-[#64748B] hover:text-[#CBD5E1]"
+            }`}
           >
             {label}
           </button>
@@ -959,9 +995,10 @@ export default function TasksPage() {
                         return (
                           <div key={m.id}>
                             <div
-                              className={`flex items-center justify-between p-2.5 rounded-[10px] border ${rowBg} ${m.description ? "cursor-pointer" : ""}`}
+                              className={`flex flex-col p-2.5 rounded-[10px] border ${rowBg} ${m.description ? "cursor-pointer" : ""}`}
                               onClick={() => m.description ? setExpandedMilestoneId(expandedMilestoneId === m.id ? null : m.id) : null}
                             >
+                            <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 min-w-0">
                               <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold ${isApproved ? "bg-[#10B981]/20 text-[#6EE7B7]" : isActionable ? "bg-[#3B82F6]/20 text-[#93C5FD]" : "bg-white/[0.06] text-[#64748B]"}`}>
                                 {isApproved ? <CheckCircle className="h-3 w-3" /> : isLocked ? <Lock className="h-3 w-3" /> : i + 1}
@@ -1004,6 +1041,21 @@ export default function TasksPage() {
                                 <button className="p-1 rounded-[8px] hover:bg-white/[0.06] transition-colors" title="Download reviewer file" onClick={() => downloadFile(m.latestReview.reviewer_file_url, m.latestReview.reviewer_file_name || "file")}><FileText className="h-3.5 w-3.5 text-[#FBBF24]" /></button>
                               )}
                             </div>
+                            </div>
+                            {/* Chief sees employee's submission comment when reviewing */}
+                            {canReview && m.latestReview?.comment && (
+                              <div className="mt-2 pl-8 py-1.5 px-2 rounded-[8px] bg-[#3B82F6]/[0.06] text-[12px] text-[#94A3B8]">
+                                <span className="font-medium text-[#93C5FD]">Employee note: </span>
+                                {m.latestReview.comment}
+                              </div>
+                            )}
+                            {/* Employee sees Chief's rejection feedback when milestone needs revision */}
+                            {canResubmit && m.latestReview?.comment && (
+                              <div className="mt-2 pl-8 py-1.5 px-2 rounded-[8px] bg-[#EF4444]/[0.06] text-[12px] text-[#94A3B8]">
+                                <span className="font-medium text-[#FCA5A5]">Reviewer feedback: </span>
+                                {m.latestReview.comment}
+                              </div>
+                            )}
                           </div>
                           {expandedMilestoneId === m.id && m.description && (
                             <div className="px-2.5 pb-2.5 -mt-1">
@@ -1119,7 +1171,11 @@ export default function TasksPage() {
                     <MilestoneStatusBadge status={m.status} />
                     <button type="button" disabled={i === 0} onClick={() => moveMilestone(i, -1)} className="p-1 rounded-[8px] text-[#64748B] hover:text-[#CBD5E1] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none"><ChevronDown className="h-3.5 w-3.5 rotate-180" /></button>
                     <button type="button" disabled={i === milestoneListForManage.length - 1} onClick={() => moveMilestone(i, 1)} className="p-1 rounded-[8px] text-[#64748B] hover:text-[#CBD5E1] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none"><ChevronDown className="h-3.5 w-3.5" /></button>
-                    <button type="button" onClick={() => setEditingMilestone({ ...m })} className="px-2 py-1 rounded-[8px] text-[12px] font-medium text-[#94A3B8] hover:text-[#CBD5E1] hover:bg-white/[0.06]">Edit</button>
+                    <button type="button" onClick={() => {
+                      const existingDate = m.due_datetime ? new Date(m.due_datetime).toISOString().split('T')[0] : ""
+                      const existingTime = m.due_datetime ? new Date(m.due_datetime).toTimeString().slice(0, 5) : ""
+                      setEditingMilestone({ ...m, dueDate: existingDate, dueTime: existingTime })
+                    }} className="px-2 py-1 rounded-[8px] text-[12px] font-medium text-[#94A3B8] hover:text-[#CBD5E1] hover:bg-white/[0.06]">Edit</button>
                     <button type="button" onClick={() => handleDeleteMilestone(m.id)} className="p-1 rounded-[8px] text-[#64748B] hover:text-[#EF4444] hover:bg-white/[0.06]"><X className="h-3.5 w-3.5" /></button>
                   </div>
                 ))}
@@ -1127,13 +1183,26 @@ export default function TasksPage() {
             )}
             <div className="flex items-center gap-2">
               <Input placeholder="New milestone title" value={newMilestoneTitle} onChange={(e) => setNewMilestoneTitle(e.target.value)} className="h-9 text-[13px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px]" />
-              <TaskButtonGhost onClick={handleAddMilestoneMidTask} disabled={!newMilestoneTitle.trim() || !newMilestoneDescription.trim() || !newMilestoneDueDate || !newMilestoneDueTime}><Plus className="h-3.5 w-3.5" />Add</TaskButtonGhost>
+              <TaskButton onClick={handleAddMilestoneMidTask} disabled={!newMilestoneTitle.trim() || !newMilestoneDescription.trim() || !newMilestoneDueDate || !newMilestoneDueTime}><Plus className="h-3.5 w-3.5" />Add Milestone</TaskButton>
             </div>
             <div className="grid grid-cols-3 gap-2">
               <Input placeholder="Description" value={newMilestoneDescription} onChange={(e) => setNewMilestoneDescription(e.target.value)} className="h-9 text-[13px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px]" />
-              <Input type="date" value={newMilestoneDueDate} onChange={(e) => setNewMilestoneDueDate(e.target.value)} className="h-9 text-[13px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] color-scheme-dark" />
-              <Input type="time" value={newMilestoneDueTime} onChange={(e) => setNewMilestoneDueTime(e.target.value)} className="h-9 text-[13px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] color-scheme-dark" />
+              <Input 
+                type="date" 
+                min={todayStr}
+                value={newMilestoneDueDate} 
+                onChange={(e) => { setNewMilestoneDueDate(e.target.value); setNewMilestoneDueTime("") }} 
+                className="h-9 text-[13px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] color-scheme-dark" 
+              />
+              <Input 
+                type="time" 
+                min={newMilestoneDueDate === todayStr ? nowTimeStr : undefined}
+                value={newMilestoneDueTime} 
+                onChange={(e) => setNewMilestoneDueTime(e.target.value)} 
+                className="h-9 text-[13px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] color-scheme-dark" 
+              />
             </div>
+            <p className="text-[11px] text-[#475569]">Fill in all fields above, then click "Add Milestone" to add it to the list.</p>
             {milestoneListForManage.length === 0 && (<p className="text-[13px] text-[#64748B] text-center py-4">No milestones yet. Add one to get started.</p>)}
           </div>
           <DialogFooter className="mt-2"><TaskButton variant="secondary" onClick={() => { setManageMilestonesOpen(false); setEditingMilestone(null); setNewMilestoneTitle(""); setNewMilestoneDescription(""); setNewMilestoneDueDate(""); setNewMilestoneDueTime("") }}>Done</TaskButton></DialogFooter>
@@ -1152,8 +1221,9 @@ export default function TasksPage() {
                 <Label className="text-[13px] text-[#CBD5E1]">Due Date <span className="text-red-400">*</span></Label>
                 <Input
                   type="date"
-                  value={editingMilestone?.due_datetime ? new Date(editingMilestone.due_datetime).toISOString().split('T')[0] : ""}
-                  onChange={(e) => setEditingMilestone({ ...editingMilestone, dueDate: e.target.value })}
+                  min={todayStr}
+                  value={editingMilestone?.dueDate || ""}
+                  onChange={(e) => setEditingMilestone({ ...editingMilestone, dueDate: e.target.value, dueTime: "" })}
                   className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] h-10 text-[14px] color-scheme-dark"
                 />
               </div>
@@ -1161,12 +1231,31 @@ export default function TasksPage() {
                 <Label className="text-[13px] text-[#CBD5E1]">Due Time <span className="text-red-400">*</span></Label>
                 <Input
                   type="time"
-                  value={editingMilestone?.due_datetime ? new Date(editingMilestone.due_datetime).toTimeString().slice(0, 5) : ""}
+                  min={editingMilestone?.dueDate === todayStr ? nowTimeStr : undefined}
+                  value={editingMilestone?.dueTime || ""}
                   onChange={(e) => setEditingMilestone({ ...editingMilestone, dueTime: e.target.value })}
                   className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] h-10 text-[14px] color-scheme-dark"
                 />
               </div>
             </div>
+            {editingMilestone && (() => {
+              const otherWeight = milestoneListForManage
+                .filter((m: any) => m.id !== editingMilestone.id)
+                .reduce((sum: number, m: any) => sum + (m.weight || 0), 0)
+              const currentTotal = otherWeight + (editingMilestone.weight || 0)
+              const remaining = 100 - otherWeight
+              return (
+                <p className="text-[12px] text-[#64748B]">
+                  Budget for this milestone:{" "}
+                  <span className={`font-semibold ${currentTotal === 100 ? "text-[#6EE7B7]" : "text-[#FBBF24]"}`}>
+                    {remaining}%
+                  </span>
+                  {currentTotal !== 100 && (
+                    <span className="ml-2">(current total: {currentTotal}%)</span>
+                  )}
+                </p>
+              )
+            })()}
             <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Weight (%)</Label><Input type="number" min={0} max={100} value={editingMilestone?.weight || 0} onChange={(e) => setEditingMilestone({ ...editingMilestone, weight: parseInt(e.target.value) || 0 })} className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] h-10 text-[14px]" /></div>
           </div>
           <DialogFooter className="mt-2">
@@ -1222,8 +1311,16 @@ export default function TasksPage() {
       <Dialog open={assignerReviewOpen} onOpenChange={(open) => { if (!open) { setAssignerReviewOpen(false); setAssignerFile(null) } }}>
         <DialogContent className="sm:max-w-[460px] bg-[#121826] border-white/[0.06] text-[#F1F5F9] rounded-[14px]">
           <DialogHeader>
-            <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">{assignerReviewTask?.status === "pending_review" ? "Review Progress" : assignerReviewTask?.status === "pending_completion_review" ? "Approve Completion" : "Review"}</DialogTitle>
-            <DialogDescription className="text-[13px] text-[#64748B]">{assignerReviewTask?.status === "pending_review" ? "Set the actual progress percentage and leave feedback." : assignerReviewTask?.status === "pending_completion_review" ? "Attach an optional file and confirm approval." : "Send the task back with feedback explaining what needs work."}</DialogDescription>
+            <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">
+              {assignerAction === "review" ? "Review Progress"
+               : assignerAction === "approve" ? "Approve Completion"
+               : "Reject & Return Task"}
+            </DialogTitle>
+            <DialogDescription className="text-[13px] text-[#64748B]">
+              {assignerAction === "review" ? "Set the actual progress percentage and leave feedback."
+               : assignerAction === "approve" ? "Attach an optional file and confirm your approval."
+               : "Provide feedback explaining what needs to be revised."}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2 min-w-0">
             {assignerReviewTask?.status === "pending_review" && (

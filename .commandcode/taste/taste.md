@@ -32,6 +32,10 @@
 # code-style
 - When fixing bugs, make surgical fixes only — don't refactor unrelated code or expand scope beyond the issue at hand. Confidence: 0.65
 
+# design-system
+- All workspace dashboard pages use a premium dark theme: page background `#0B0F1A`, card/surface background `#121826`, borders `border-white/[0.06]`, headings `#F1F5F9`, secondary text `#64748B`, accent blue text `#93C5FD`, accent purple text `#C4B5FD`. Cards use `rounded-[14px]`, hero sections use `rounded-[20px]`. Tab bars use pill-style with `bg-[#121826]` wrapper and `data-[state=active]:bg-white/10` for active state. Confidence: 0.80
+- When applying the dark theme, replace shadcn Card/CardContent/CardHeader/CardTitle components with plain divs using dark theme classNames, and replace shadcn Button with native button elements styled inline. This avoids shadcn default light-mode styling conflicts. Confidence: 0.75
+
 # css
 - For modal/dialog footers that must stay pinned at the bottom: use a column flex layout (fixed header, scrollable middle content with overflow-y:auto, fixed footer as a normal flex child) — do NOT use position:sticky on the footer as it causes floating/overlapping over form content. Confidence: 0.70
 - Always cap modal/dialog height with a viewport-relative max-height (e.g., max-height: 90vh) so the modal never exceeds the visible browser window, regardless of content length. Combine with the column flex layout for the internal scroll. Confidence: 0.70

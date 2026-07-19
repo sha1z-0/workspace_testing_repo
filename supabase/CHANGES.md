@@ -1,5 +1,232 @@
 # Changes Log — Finova Workspace
 
+## [2026-07-19] Vault — Fixed Uneven Card Heights CSS Grid Stretch
+### Status: Completed
+### Root Cause
+While inner content areas had fixed minimum heights, the outer `motion.div` and `Card` components were not configured to stretch to the full height of the CSS grid row.
+### Actual Changes Made
+- Added `className="h-full"` to the `motion.div` wrapper in the map function.
+- Added `h-full flex flex-col` to the `Card` component so it stretches.
+- Added `flex-1` to `CardContent` so it expands and properly pushes the `mt-auto` footer to the bottom.
+### Files Touched
+- `app/(workspace)/vault/page.tsx`
+- `supabase/CHANGES.md`
+### Verification
+- [ ] Cards in the same row are exactly the same height regardless of content length.
+- [ ] Footers align perfectly at the bottom of the cards.
+
+## [2026-07-19] Calendar — Full UI Redesign (Dark Theme Alignment)
+### Status: Completed
+### Root Cause
+The Calendar page used a mismatched visual language: light glass cards (`bg-white/30`), a blue gradient hero, and event pills with light-mode colours (`bg-purple-100/80 text-purple-700`). This clashed with the dark `#0B0F1A` / `#121826` theme established in the Tasks page. The navigation bar used a light frosted style inconsistent with the grid below.
+### Actual Changes Made
+- Outer container: added `style={{ background: "#0B0F1A" }}` and `min-h-screen`.
+- Hero section: replaced blue gradient blob with compact dark card (`#121826`); added Calendar role badge pill, clean dark title.
+- View switcher (Day/Week/Month): moved from inside hero gradient into a clean pill control within the hero card, matching Tasks page tab style.
+- "New Event" button: replaced shadcn `<Button>` with a native `<button>` styled in `bg-[#3B82F6]` to match design system.
+- Navigation bar: replaced light `bg-white/40 backdrop-blur-md rounded-2xl` with flat inline navigation (prev/next arrows as ghost icon buttons, month title, "Today" pill button).
+- Month grid container: replaced `bg-white/30 backdrop-blur-xl rounded-3xl` with `bg-[#121826] border-white/[0.06] rounded-[14px]`.
+- Day headers: replaced `text-muted-foreground font-semibold` with `text-[#475569] tracking-widest`.
+- Day cells: replaced `bg-white/40 dark:bg-slate-800/40 rounded-2xl` with `bg-[#121826]` cells in a `gap-[1px] bg-white/[0.03]` grid.
+- Today cell: `ring-1 ring-[#3B82F6]/30` + `bg-[#0F1523]`; today date number in `bg-[#3B82F6] text-white` circle.
+- Event pills: replaced light `bg-blue-100/80 text-blue-700` with dark `bg-[#3B82F6]/[0.15] text-[#93C5FD]` (event) and `bg-[#8B5CF6]/[0.15] text-[#C4B5FD]` (meeting).
+- Day view: `bg-[#121826] rounded-[14px]`; event cards `bg-[#0F1523]`; left accent bar retained in blue/purple; type badge as coloured pill.
+- Day view empty state: dark `bg-[#0F1523]` container with blue icon ring.
+- Event details dialog body: `bg-[#121826]` surface; metadata icons in `bg-[#0F1523]`; all text tokens aligned to design system.
+- Removed `Card`, `CardContent` imports (no longer used).
+### Files Touched
+- `app/(workspace)/calendar/page.tsx`
+- `supabase/CHANGES.md`
+### Verification
+- [ ] Page background is dark (#0B0F1A)
+- [ ] Hero: Calendar badge + title visible
+- [ ] View switcher: pill style, active = white/10 bg, inactive = muted text
+- [ ] Navigation bar: clean prev/next arrows + month title + "Today" pill, no light card
+- [ ] Month grid: dark cells with hairline separators
+- [ ] Today cell: blue ring + blue date circle
+- [ ] Event pills: dark blue / dark purple, readable on dark cells
+- [ ] Day view: dark card surface, event cards with accent bar + type pill
+- [ ] Day view empty state: dark container with blue icon
+- [ ] Event details dialog: dark body, correct text colours
+- [ ] All button onClick handlers still fire correctly
+- [ ] Event creation dialog unchanged and functional
+- [ ] No TypeScript/import errors
+
+## [2026-07-19] C-Level Dashboard — Full UI Redesign (UI Theme Alignment)
+### Status: Completed
+### Root Cause
+The C-Level dashboard used a mismatched visual language (light glass cards, blue gradient hero, default shadcn Tabs) compared to the Tasks page which uses a premium dark theme with `#0B0F1A` background, `#121826` card surfaces, and `border-white/[0.06]` borders. The stat cards were flat and had no visual depth. The tab bar was unstyled.
+### Actual Changes Made
+- Outer container: added `style={{ background: "#0B0F1A" }}` and `min-h-screen p-1`.
+- Hero section: replaced full-width blue gradient blob with a compact dark card (`#121826`) featuring a role badge pill, clean title, date chip, and "Operations Active" status chip.
+- Stat cards: replaced shadcn `Card` components with custom dark divs featuring gradient left-border accents, large faded background icons, larger `text-[36px]` numbers, and hover glow effects in blue/purple/green per card.
+- Tab bar: replaced default `TabsList` with a pill-style tab bar matching the Tasks page pattern (same `bg-[#121826]`, same `border-white/[0.06]` wrapper, same active/inactive color tokens).
+- Tab content panels: replaced shadcn `Card` with a single dark rounded container (`bg-[#121826] border-white/[0.06] rounded-[14px]`) with a distinct header row (icon + title + description + action button) separated by a `border-b border-white/[0.06]` from the content area.
+- Removed `Card`, `CardContent`, `CardDescription`, `CardHeader`, `CardTitle` imports (no longer used).
+- Added `Shield`, `Calendar`, `TrendingUp`, `Sparkles` to lucide-react imports.
+- No changes made to: state variables, API calls, button onClick handlers, sub-components (AnnouncementsList, ProjectsList, TeamsList, CreateAnnouncement, CreateProjectDialog, CreateTeamDialog).
+### Files Touched
+- `app/(workspace)/admin/c-level/page.tsx`
+- `supabase/CHANGES.md`
+### Verification
+- [ ] Page background is dark (#0B0F1A)
+- [ ] Hero: role badge + title + date chip + status chip visible
+- [ ] 3 stat cards: each has a coloured left border, faded background icon, large white number
+- [ ] Stat cards: hover shows a subtle glow in matching colour
+- [ ] Tab bar: pill style with icon + label, active tab has `bg-white/10`
+- [ ] Tab content: dark panel with header row (icon + title + description + button)
+- [ ] All buttons (Create Announcement, New Project, New Team) still work
+- [ ] AnnouncementsList, ProjectsList, TeamsList still render correctly inside the panels
+- [ ] CreateProjectDialog and CreateTeamDialog still open correctly
+- [ ] No TypeScript/import errors
+
+## [2026-07-19] Tasks — Remove Automatic 15% Progress Jump on Start (NB-03)
+### Status: Completed
+### Root Cause
+`tasksAPI.startTask()` set `progress: 15` to signal "started" — misleading because no actual progress update was submitted by the employee.
+### Actual Changes Made
+- `tasksAPI.startTask` (api.ts): changed `progress: isPhased ? 0 : 15` to `progress: 0`.
+- `handleStartTask` toast (page.tsx): updated description to "Task is now in progress. Submit a progress update when ready."
+### Files Touched
+- `lib/api.ts`
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+### Verification
+- [ ] Starting a task: progress ring shows 0%, status shows "In Progress"
+- [ ] Toast: new description shown
+- [ ] Progress is set by Chief after employee submits a progress update
+- [ ] Milestone tasks unaffected (already set progress: 0)
+
+## [2026-07-19] Milestones — Date Validation, Edit Fix, Weight Display, Add UX (NB-06, NB-07, NB-08, UI-04)
+### Status: Completed
+### Root Cause (NB-06)
+All three milestone date inputs had no `min` attribute — past dates/times could be selected.
+### Root Cause (NB-07)
+Edit Milestone dialog used `editingMilestone.due_datetime` for input `value` while `onChange` wrote to `editingMilestone.dueDate`. React's controlled input reconciliation reset the field on every keystroke.
+### Root Cause (NB-08)
+Weight validation required exactly 100% but showed no live budget indicator — users had no feedback on what to enter.
+### Root Cause (UI-04)
+The ghost-style Add button blended in visually — users missed it and clicked "Done" instead.
+### Actual Changes Made
+- All milestone date inputs: added `min={todayStr}` and conditional `min` on time inputs. Date onChange also clears time to avoid stale selections.
+- Edit button: pre-populates `dueDate`/`dueTime` from `due_datetime` when clicked.
+- Edit dialog date/time inputs: `value` now reads from `editingMilestone.dueDate`/`dueTime` (controlled correctly).
+- Live weight budget indicator added above Weight input in Edit dialog — shows remaining % in yellow until 100%, green when balanced.
+- "Add" button changed from `TaskButtonGhost` to primary `TaskButton` with "Add Milestone" label.
+- Helper text added below input row: "Fill in all fields above, then click Add Milestone..."
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+### Verification
+- [ ] Past dates greyed out in all three milestone date pickers
+- [ ] Edit Milestone: date/time inputs pre-filled with existing values
+- [ ] Edit Milestone: changing date/time saves correctly without resetting
+- [ ] Live weight budget shown in yellow when ≠ 100%, green when = 100%
+- [ ] "Add Milestone" button is visually prominent (blue primary style)
+- [ ] Helper text below milestone input row guides users
+- [ ] Weight validation still blocks save when total ≠ 100%
+
+## [2026-07-19] Milestone — Comment Visibility + Status Sync (B-04, B-05, B-06, NB-05)
+### Status: Completed
+### Root Cause (B-04, B-06)
+`m.latestReview.comment` was fetched but never rendered in the milestone stepper. Chief could see document buttons but not the employee's text comment.
+### Root Cause (B-05)
+Same: after rejection, Chief's feedback stored in `milestone_reviews.comment` but never displayed to the employee. Only "Needs Revision" badge was shown.
+### Root Cause (NB-05)
+After `handleSubmitMilestoneReview`, `setMilestones(m)` correctly updated the stepper. But `fetchTasks()` was not called, so the task card milestone summary chip and board did not reflect the new status.
+### Actual Changes Made
+- Milestone stepper row: changed from `flex items-center justify-between` to `flex flex-col` with inner row wrapper.
+- Added blue-tinted employee comment block: visible to Chief when `canReview && m.latestReview?.comment`.
+- Added red-tinted reviewer feedback block: visible to Employee when `canResubmit && m.latestReview?.comment`.
+- `handleSubmitMilestoneReview` and `handleRejectMilestone`: added `await fetchTasks()` after milestones refresh.
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+### Verification
+- [ ] Employee submits milestone with comment → Chief sees comment text in blue box below row
+- [ ] Chief rejects with feedback → Employee sees feedback text in red box below row
+- [ ] After resubmission: new comment replaces old one
+- [ ] After submission: milestone badge updates to "Review" in stepper and on task card
+- [ ] Document download buttons still work (no regression)
+- [ ] Approved milestones show no comment boxes
+
+## [2026-07-19] Final Review — Comment Visibility + Reject Dialog Copy (B-09, NB-04)
+### Status: Completed
+### Root Cause (B-09)
+`handleSubmitCompletionReview` did not pass `reviewNotes` to the API. `handleApproveCompletion` did not pass `assignerNotes`. Both API functions did not accept or save these notes.
+### Root Cause (NB-04)
+Assigner Review Modal title/description was driven by `assignerReviewTask?.status`. When rejecting, status is still `"pending_completion_review"` — so "Approve Completion" copy was shown.
+### Actual Changes Made
+- `handleSubmitCompletionReview`: passes `reviewNotes` as 5th arg.
+- `tasksAPI.submitCompletionReview`: added `notes?` param, saves to `review_notes`.
+- `handleApproveCompletion`: passes `assignerNotes` as 4th arg.
+- `tasksAPI.approveCompletion`: added `notes?` param, saves to `review_assigner_notes`.
+- Assigner Review Modal title/description now driven by `assignerAction` not task status.
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `lib/api.ts`
+- `supabase/CHANGES.md`
+### Verification
+- [ ] Employee submits Completion Review with notes → Chief sees notes in View Details
+- [ ] Chief approves with feedback → Employee sees feedback in View Details
+- [ ] Reject dialog: title "Reject & Return Task", correct description
+- [ ] Approve dialog: title "Approve Completion", correct description
+- [ ] Review Progress dialog: unchanged
+
+## [2026-07-19] Tasks — Archived Tab Filter (UI-03)
+### Status: Completed
+### Root Cause
+Archived tasks were excluded from all views via `activeTasks` filter. No way to view them after archiving.
+### Actual Changes Made
+- Added `archived: "Archived"` to `TAB_LABELS`, shown only when `isManager`.
+- Extended `getTasksByStatus` to handle `"archived"` — reads from raw `tasks` array (bypasses `activeTasks`).
+- Archived tab styled with amber tint when active.
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+### Verification
+- [ ] Manager sees "Archived" tab
+- [ ] Employee does not see "Archived" tab
+- [ ] Archived tab shows tasks archived by current user
+- [ ] All other tabs still exclude archived tasks
+
+## [2026-07-19] Task Creation — Past Date/Time Validation (NB-01, NB-02)
+### Status: Completed
+### Root Cause
+NB-01: Due Date input had no `min` attribute. NB-02: Due Time input had no conditional `min` for when today was selected.
+### Actual Changes Made
+- Computed `todayStr` and `nowTimeStr` just before the return block.
+- Due Date input: added `min={todayStr}`, and onChange now also clears `dueTime`/`dueTimeError` when date changes.
+- Due Time input: added `min={newTask.dueDate === todayStr ? nowTimeStr : undefined}`.
+- `handleCreateTask`: added past-datetime guard after time validation — shows toast and returns early if the combined date+time is in the past.
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+### Verification
+- [ ] Past dates greyed out in date picker
+- [ ] Past times greyed out when today is selected
+- [ ] Changing date clears the time field
+- [ ] Manually-typed past datetime blocked by toast
+- [ ] Valid future datetime creates task normally
+
+## [2026-07-19] Vault — Card Height Uniformity + Reveal Stability (UI-01, UI-02)
+### Status: Completed
+### Root Cause
+UI-01: Cards with descriptions rendered a `<p>` while cards without rendered nothing, creating variable card heights in the same grid row.
+UI-02: The reveal container had `min-h-[40px]` internally but overall card content still varied due to description presence/absence.
+### Actual Changes Made
+- `CardContent` given `flex flex-col`.
+- Description block wrapped in `min-h-[36px] mb-3` container.
+- "Other" text_value block wrapped in `min-h-[52px]` container.
+- Footer changed from `mt-3` to `mt-auto pt-3` to anchor it to the card bottom.
+### Files Touched
+- `app/(workspace)/vault/page.tsx`
+- `supabase/CHANGES.md`
+### Verification
+- [ ] Card with description and card without are the same height in the same grid row
+- [ ] Clicking reveal on api_key card does NOT shift adjacent cards
+- [ ] "Added by" footer always pinned to the bottom of every card
+
 ## [2026-07-15] Nearest Deadline Sort Implementation
 ### Status: Completed
 ### Root Cause / Context
