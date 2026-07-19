@@ -791,7 +791,6 @@ export default function TasksPage() {
                               <Input type="date" min={todayStr} value={m.dueDate || ""} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], dueDate: e.target.value, dueTime: "" }; setNewTask({ ...newTask, milestones: ms }) }} className="h-7 text-[12px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] color-scheme-dark" placeholder="Due date" />
                               <Input type="time" min={m.dueDate === todayStr ? nowTimeStr : undefined} value={m.dueTime || ""} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], dueTime: e.target.value }; setNewTask({ ...newTask, milestones: ms }) }} className="h-7 text-[12px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] color-scheme-dark" placeholder="Due time" />
                             </div>
-                            </div>
                           </div>
                           {newTask.milestones.length > 1 && (
                             <button onClick={() => { const ms = newTask.milestones.filter((_, j) => j !== i); setNewTask({ ...newTask, milestones: ms }) }} className="pt-1.5 text-[#64748B] hover:text-[#EF4444]"><X className="h-4 w-4" /></button>

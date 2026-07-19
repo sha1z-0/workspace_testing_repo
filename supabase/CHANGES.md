@@ -1,5 +1,18 @@
 # Changes Log — Finova Workspace
 
+## [2026-07-19] Tasks — Fixed JSX Syntax Error in Milestone Builder
+### Status: Completed
+### Root Cause
+An extra `</div>` was accidentally left in the milestone builder section, closing the parent element prematurely and causing the JSX parser to fail on the subsequent conditional rendering block.
+### Actual Changes Made
+- Removed the extra `</div>` closing tag immediately preceding the milestone delete button logic.
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+### Verification
+- [ ] Next.js build / TypeScript compilation succeeds without errors.
+- [ ] Milestone builder UI renders correctly and the delete button remains functional.
+
 ## [2026-07-19] Vault — Fixed Uneven Card Heights CSS Grid Stretch
 ### Status: Completed
 ### Root Cause
