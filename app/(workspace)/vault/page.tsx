@@ -347,7 +347,7 @@ export default function VaultPage() {
                               {revealedItems.has(item.id) ? "Hide" : "Click to Reveal"}
                             </Button>
                             {/* Fixed-height container prevents layout shift */}
-                            <div className="relative min-h-[40px]">
+                            <div className="relative h-[80px] overflow-y-auto">
                               {revealedItems.has(item.id) ? (
                                 <div className="relative">
                                   <code className="block text-xs bg-slate-100 dark:bg-slate-800 p-2 rounded border break-all pr-8 font-mono">

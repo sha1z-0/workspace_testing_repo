@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Finova Workspace — QA Change Report</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  @page {
+    size: A4;
+    margin: 18mm 15mm 18mm 15mm;
+  }
+  
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 10.5px;
+    color: #1e293b;
+    line-height: 1.65;
+    background: #fff;
+    padding: 20px 40px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  
+  .centered { text-align: center; margin: 30px 0; }
+  
+  /* COVER */
+  .centered h1:first-child {
+    font-size: 28px;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+    border: none;
+    padding: 0;
+  }
+  .centered h2 {
+    font-size: 16px;
+    color: #3B82F6;
+    font-weight: 500;
+    border: none;
+    padding: 0;
+    margin-top: 0;
+  }
+  
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    border-bottom: 2.5px solid #3B82F6;
+    padding-bottom: 6px;
+    margin-top: 32px;
+    margin-bottom: 14px;
+    letter-spacing: -0.3px;
+    page-break-after: avoid;
+  }
+  
+  h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e3a5f;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+    margin-top: 24px;
+    margin-bottom: 10px;
+    page-break-after: avoid;
+  }
+  
+  h3 {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #334155;
+    margin-top: 16px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+  }
+  
+  h4 {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #475569;
+    margin-top: 12px;
+    margin-bottom: 4px;
+  }
+  
+  p {
+    margin: 6px 0;
+  }
+  
+  strong { font-weight: 600; }
+  
+  code {
+    background: #f1f5f9;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 9.5px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    color: #be185d;
+  }
+  
+  pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 14px 16px;
+    border-radius: 8px;
+    font-size: 9px;
+    line-height: 1.5;
+    overflow-x: auto;
+    margin: 10px 0;
+    page-break-inside: avoid;
+  }
+  pre code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 10px 0 14px 0;
+    font-size: 10px;
+    page-break-inside: avoid;
+  }
+  
+  thead th {
+    background: #1e3a5f;
+    color: #fff;
+    padding: 7px 10px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  
+  td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+  }
+  
+  tbody tr:nth-child(even) td {
+    background: #f8fafc;
+  }
+  
+  tbody tr:hover td {
+    background: #eff6ff;
+  }
+  
+  blockquote {
+    border-left: 3px solid #3B82F6;
+    padding: 8px 14px;
+    margin: 10px 0;
+    background: #eff6ff;
+    border-radius: 0 6px 6px 0;
+    color: #334155;
+    font-size: 10px;
+  }
+  
+  ul {
+    margin: 6px 0 6px 20px;
+    padding: 0;
+  }
+  
+  li {
+    margin: 3px 0;
+  }
+  
+  hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 20px 0;
+  }
+  
+  .check-item {
+    padding: 3px 0 3px 4px;
+    font-size: 10.5px;
+  }
+  .check-item .checkbox {
+    font-size: 12px;
+    margin-right: 6px;
+    color: #94a3b8;
+  }
+  .check-item.done .checkbox {
+    color: #22c55e;
+  }
+  
+  /* Print optimizations */
+  @media print {
+    body { padding: 0; max-width: none; }
+    h1 { page-break-after: avoid; }
+    h2, h3 { page-break-after: avoid; }
+    table, pre, blockquote { page-break-inside: avoid; }
+    .page-break { page-break-before: always; }
+  }
+  
+  /* Section styling */
+  h2 + p { margin-top: 4px; }
+  
+  /* Cover page separator */
+  .centered + hr {
+    border-top: 2px solid #3B82F6;
+    margin: 20px auto;
+    width: 60%;
+  }
+</style>
+</head>
+<body>
+<p><![CDATA[<div class="centered"></p>
+
+<h1>FINOVA WORKSPACE</h1>
+<h2>Quality Assurance — Complete Change Report</h2>
+
+<p><strong>Document Version:</strong> 1.0  </p>
+<p><strong>Date Prepared:</strong> 21 July 2026  </p>
+<p><strong>Prepared By:</strong> Architecture & Planning Team  </p>
+<p><strong>Classification:</strong> Internal — QA Team Distribution  </p>
+
+<hr>
+
+<p><em>This document catalogs every modification made to the Finova Workspace codebase, organized by functional area. Each entry includes the root cause, files touched, and a verification checklist for QA regression testing.</em></p>
+
+</div>
+
+<hr>
+
+<h2>Table of Contents</h2>
+
+<table><thead><tr><th>#</th><th>Section</th><th>Page</th></tr></thead><tbody><tr><td>1</td><td>[Executive Summary](#1-executive-summary)</td><td>—</td></tr><tr><td>2</td><td>[Design System & Theme](#2-design-system--theme)</td><td>—</td></tr><tr><td>3</td><td>[Authentication & Login](#3-authentication--login)</td><td>—</td></tr><tr><td>4</td><td>[Task Management — Core Workflow](#4-task-management--core-workflow)</td><td>—</td></tr><tr><td>5</td><td>[Task Management — UI & Validation](#5-task-management--ui--validation)</td><td>—</td></tr><tr><td>6</td><td>[Milestone System](#6-milestone-system)</td><td>—</td></tr><tr><td>7</td><td>[File Upload & Storage](#7-file-upload--storage)</td><td>—</td></tr><tr><td>8</td><td>[Vault Module](#8-vault-module)</td><td>—</td></tr><tr><td>9</td><td>[Calendar Module](#9-calendar-module)</td><td>—</td></tr><tr><td>10</td><td>[C-Level Dashboard](#10-c-level-dashboard)</td><td>—</td></tr><tr><td>11</td><td>[Database Migrations](#11-database-migrations)</td><td>—</td></tr><tr><td>12</td><td>[Documentation & Tooling](#12-documentation--tooling)</td><td>—</td></tr><tr><td>13</td><td>[Build & Syntax Fixes](#13-build--syntax-fixes)</td><td>—</td></tr><tr><td>14</td><td>[Complete File Impact Matrix](#14-complete-file-impact-matrix)</td><td>—</td></tr><tr><td>15</td><td>[Master Regression Checklist](#15-master-regression-checklist)</td><td>—</td></tr></tbody></table>
+
+<hr>
+
+<h2>1. Executive Summary</h2>
+
+<p>Over the course of development sessions spanning <strong>July 4 – July 19, 2026</strong>, the Finova Workspace underwent <strong>40+ discrete changes</strong> across the following areas:</p>
+
+<table><thead><tr><th>Area</th><th>Changes</th><th>Severity</th></tr></thead><tbody><tr><td>Task Workflow (reviews, submissions, approvals)</td><td>12</td><td>Critical</td></tr><tr><td>Milestone System (schema, UI, enforcement)</td><td>8</td><td>Critical</td></tr><tr><td>UI/UX Redesigns (dark theme standardization)</td><td>7</td><td>Medium</td></tr><tr><td>File Upload & Storage (RLS, consolidation)</td><td>5</td><td>High</td></tr><tr><td>Vault Module (creation + fixes)</td><td>4</td><td>Medium</td></tr><tr><td>Calendar Module (creation + redesign)</td><td>3</td><td>Medium</td></tr><tr><td>Authentication & Login</td><td>2</td><td>Low</td></tr><tr><td>Database Migrations</td><td>6</td><td>Critical</td></tr><tr><td>Build/Syntax Fixes</td><td>3</td><td>Blocker</td></tr><tr><td>Documentation</td><td>1</td><td>Informational</td></tr></tbody></table>
+
+<p><strong>Key Technology Stack:</strong></p>
+<ul><li><strong>Frontend:</strong> Next.js (App Router), React, TypeScript, TailwindCSS, Framer Motion, shadcn/ui</li>
+<li><strong>Backend:</strong> Supabase (PostgreSQL + Auth + Storage + Edge Functions)</li>
+<li><strong>Email:</strong> SendGrid API</li>
+<li><strong>Calendar Integration:</strong> Google Calendar OAuth2</li>
+</ul>
+<p><strong>Design System Colors:</strong></p>
+<table><thead><tr><th>Token</th><th>Value</th><th>Usage</th></tr></thead><tbody><tr><td>Page Background</td><td><code>#0B0F1A</code></td><td>All page backgrounds</td></tr><tr><td>Card Surface</td><td><code>#121826</code></td><td>Cards, modals, panels</td></tr><tr><td>Inset Surface</td><td><code>#0F1523</code></td><td>Nested containers</td></tr><tr><td>Border</td><td><code>rgba(255,255,255,0.06)</code></td><td>All borders</td></tr><tr><td>Primary Text</td><td><code>#F1F5F9</code></td><td>Headings, values</td></tr><tr><td>Secondary Text</td><td><code>#CBD5E1</code></td><td>Labels, descriptions</td></tr><tr><td>Muted Text</td><td><code>#64748B</code></td><td>Timestamps, hints</td></tr><tr><td>Accent Blue</td><td><code>#3B82F6</code></td><td>Primary actions</td></tr><tr><td>Accent Purple</td><td><code>#8B5CF6</code></td><td>Completion actions</td></tr><tr><td>Accent Amber</td><td><code>#FBBF24</code></td><td>Warning states</td></tr></tbody></table>
+
+<hr>
+
+<h2>2. Design System & Theme</h2>
+
+<h3>2.1 Task Panel Visual Redesign</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>Files:</strong> <code>app/(workspace)/tasks/page.tsx</code>, 7 new component files in <code>components/tasks/</code></p>
+
+<p>The entire task management interface was rebuilt from scratch with a premium dark theme. This was a <strong>pure visual/layout restyle</strong> — zero functional changes. Every button calls the same handler, every form submits identical data.</p>
+
+<p><strong>New Shared Components Created:</strong></p>
+
+<table><thead><tr><th>Component</th><th>File</th><th>Purpose</th></tr></thead><tbody><tr><td>StatusPill</td><td><code>components/tasks/status-pill.tsx</code></td><td>Tinted badge per task status</td></tr><tr><td>PriorityPill</td><td><code>components/tasks/priority-pill.tsx</code></td><td>Colored dot + priority label</td></tr><tr><td>MilestoneStatusBadge</td><td><code>components/tasks/milestone-status-badge.tsx</code></td><td>Per-milestone status pill</td></tr><tr><td>FileDropZone</td><td><code>components/tasks/file-drop-zone.tsx</code></td><td>Unified drag-and-drop file area</td></tr><tr><td>TaskButton / TaskButtonGhost</td><td><code>components/tasks/task-button.tsx</code></td><td>Primary/secondary action buttons</td></tr><tr><td>CardProgressBar</td><td><code>components/tasks/card-progress-bar.tsx</code></td><td>Thin progress bar on cards</td></tr><tr><td>ProgressRing</td><td><code>components/tasks/progress-ring.tsx</code></td><td>SVG circular progress indicator</td></tr></tbody></table>
+
+<p><strong>Screens Redesigned:</strong></p>
+<li>Taskboard dashboard — flat dark header, sort toggle, segmented tabs, new card design</li>
+<li>View Details modal — progress ring, dark inset surfaces, milestone stepper</li>
+<li>Assign New Task modal — dark inputs, chip selectors, milestone builder</li>
+<li>Submit for Review modal — selectable option cards (Progress / Completion)</li>
+<li>Assigner Review modal — progress slider with tick labels</li>
+<li>Milestone Review dialog — unified file drop-zone</li>
+<li>Manage/Edit Milestones dialog — dark theme, status badges</li>
+
+<h3>2.2 Card Uniformity Fixes</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>Files:</strong> <code>components/tasks/status-pill.tsx</code>, <code>components/tasks/priority-pill.tsx</code>, <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Root Cause:</strong> Three elements caused variable card heights — status pills wrapping on longer labels like "Pending Review", assignee names wrapping to two lines, and header row layout inconsistencies.</p>
+
+<p><strong>Changes:</strong></p>
+<ul><li><code>whitespace-nowrap</code> added to all status and priority pill components</li>
+<li>Assignee name spans given <code>truncate whitespace-nowrap</code></li>
+<li>Header row pills given <code>flex-shrink-0</code></li>
+<li>Containers given <code>min-w-0</code> for proper flex overflow</li>
+</ul>
+<h3>2.3 Button Wrapping + Locked Submit Placeholder</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>Files:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Changes:</strong></p>
+<ul><li>"Submit for Review" button given <code>whitespace-nowrap</code> across all variants</li>
+<li>Footer always renders two buttons (View Details + Submit) on every card</li>
+<li>Three-way render logic: milestone-locked, non-milestone enabled, non-milestone disabled</li>
+</ul>
+<h3>2.4 Redesign Polish Pass</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>Files:</strong> <code>app/(workspace)/tasks/page.tsx</code>, <code>components/tasks/file-drop-zone.tsx</code>, <code>components/tasks/task-button.tsx</code></p>
+
+<p><strong>Changes:</strong></p>
+<ul><li>Removed conditional footer — every card always renders the same footer structure</li>
+<li>Chips rendered inside field containers (not below them)</li>
+<li>Scrollable create modal with sticky footer</li>
+<li>"View Details" changed from ghost to secondary button style</li>
+<li>Completion drop-zone purple tint strengthened for visibility</li>
+<li>Disabled button opacity increased from 40% to 50%</li>
+</ul>
+<hr>
+
+<h2>3. Authentication & Login</h2>
+
+<h3>3.1 Mobile Login — Dual Column Fix</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>File:</strong> <code>app/login/page.tsx</code></p>
+
+<p><strong>Root Cause:</strong> The desktop right panel (<code>flex w-full md:w-1/2</code>) rendered on ALL screen sizes. On mobile, both the desktop form and the mobile-specific layout rendered simultaneously, producing a cramped two-column appearance.</p>
+
+<p><strong>Fix:</strong> Added <code>hidden md:flex</code> to the desktop form panel — it now only renders at <code>md</code> breakpoint and above.</p>
+
+<blockquote><strong>QA Checklist:</strong><br>- [ ] Mobile (375px, 390px, 428px): single clean full-width column<br>- [ ] Desktop (1024px+): two-column layout unchanged<br>- [ ] No duplicated form fields on mobile<br>- [ ] Branding panel with video visible on desktop only</blockquote>
+
+<h3>3.2 Password Show/Hide + Remove Forgot Password</h3>
+<p><strong>Date:</strong> 2026-07-15  </p>
+<p><strong>File:</strong> <code>app/login/page.tsx</code></p>
+
+<p><strong>Changes:</strong></p>
+<ul><li>Added <code>showPassword</code> state with <code>Eye</code> / <code>EyeOff</code> toggle icons</li>
+<li>Desktop: eye button at <code>absolute right-3</code>, input gets <code>pr-12</code></li>
+<li>Mobile: eye button at <code>absolute right-4</code>, input gets <code>pr-14</code></li>
+<li>Both buttons have <code>tabIndex={-1}</code> and <code>aria-label</code></li>
+<li>Removed "Forgot password? Click here" from both desktop and mobile layouts</li>
+<li>Terms of Service / Privacy Policy text retained</li>
+</ul>
+<blockquote><strong>QA Checklist:</strong><br>- [ ] Desktop: eye icon toggles password visibility<br>- [ ] Desktop: "Forgot password?" link completely removed<br>- [ ] Mobile: same toggle behavior<br>- [ ] Mobile: "Forgot password?" link completely removed<br>- [ ] Login functionality unchanged — email/password login works</blockquote>
+
+<hr>
+
+<h2>4. Task Management — Core Workflow</h2>
+
+<h3>4.1 Task Review Workflow (Complete System)</h3>
+<p><strong>Date:</strong> 2026-07-04  </p>
+<p><strong>Files:</strong> <code>components/migrations/008-review-workflow-schema.sql</code>, <code>lib/api.ts</code>, <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Schema Additions:</strong></p>
+<ul><li><code>review_notes</code>, <code>review_assigner_notes</code>, <code>review_progress</code> columns on <code>tasks</code></li>
+<li>Status CHECK expanded: added <code>pending_review</code>, <code>pending_completion_review</code></li>
+<li>RLS <code>task_update_completed_guard</code> — prevents non-assigners from setting status to <code>completed</code></li>
+</ul>
+<p><strong>8 New API Functions:</strong> <code>startTask</code>, <code>submitProgressReview</code>, <code>reviewProgress</code>, <code>submitCompletionReview</code>, <code>uploadCompletionFile</code>, <code>approveCompletion</code>, <code>rejectCompletion</code></p>
+
+<p><strong>Workflow:</strong></p>
+<pre><code class="lang-">todo → (Start) → in_progress → (Submit Progress) → pending_review → (Assigner Reviews) → in_progress
+                              → (Submit Completion + File) → pending_completion_review → (Approve) → completed
+                                                                                       → (Reject) → in_progress
+</code></pre>
+
+<h3>4.2 Task Visibility — RLS + API Layer</h3>
+<p><strong>Date:</strong> Retroactive (via migration 001)  </p>
+<p><strong>Files:</strong> <code>components/migrations/001-task-module-overhaul.sql</code>, <code>lib/api.ts</code></p>
+
+<p><strong>RLS Policies Created:</strong></p>
+<table><thead><tr><th>Policy</th><th>Scope</th></tr></thead><tbody><tr><td><code>task_read_own</code></td><td>Users in <code>assignee_ids[]</code> or <code>viewer_ids[]</code></td></tr><tr><td><code>task_read_assigned</code></td><td>CEO/C_LEVEL/LEAD can read tasks they assigned</td></tr><tr><td><code>task_read_clevel</code></td><td>CEO/C_LEVEL can read tasks assigned TO them</td></tr><tr><td><code>task_insert</code></td><td>Only CEO/C_LEVEL/LEAD can create</td></tr><tr><td><code>task_update</code></td><td>Assigner always; assignee only when <code>submission_open = true</code></td></tr><tr><td><code>task_delete</code></td><td>Only the assigner</td></tr></tbody></table>
+
+<p><strong>API Visibility by Role:</strong></p>
+<table><thead><tr><th>Role</th><th>Sees</th></tr></thead><tbody><tr><td>CEO / C_LEVEL</td><td>All system tasks (read-only for foreign tasks)</td></tr><tr><td>LEAD</td><td>Tasks they assigned + tasks assigned to them</td></tr><tr><td>EMPLOYEE</td><td>Tasks in their <code>assignee_ids[]</code> or <code>viewer_ids[]</code></td></tr></tbody></table>
+
+<h3>4.3 C-Level Full Visibility + My Tasks Tab + Mandatory Description</h3>
+<p><strong>Date:</strong> 2026-07-15  </p>
+<p><strong>Files:</strong> <code>lib/api.ts</code>, <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Changes:</strong></p>
+<ul><li>CEO/C_LEVEL <code>getUserTasks()</code> returns all tasks (no row restriction)</li>
+<li><code>canInteractWithTask()</code> helper enforces read-only for foreign tasks</li>
+<li>"My Tasks" tab added for C-Level (filters: assigned by + viewer)</li>
+<li>Mandatory description with inline red-border validation</li>
+<li><code>assigneeError</code> state for mandatory "Assign To" field</li>
+</ul>
+<h3>4.4 Comment Visibility — Stale detailTask Fix</h3>
+<p><strong>Date:</strong> 2026-07-15 (B-02, B-03, B-08, B-09)  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Root Cause:</strong> <code>detailTask</code> state was set once on modal open and never refreshed after review actions. <code>fetchTasks()</code> updated the main <code>tasks</code> array but <code>detailTask</code> stayed stale.</p>
+
+<p><strong>Fix:</strong> Added <code>refreshDetailTask()</code> helper that re-fetches all tasks and syncs <code>detailTask</code> from the fresh array. Called after every review action.</p>
+
+<h3>4.5 Final Review — Comment Persistence + Reject Dialog Copy</h3>
+<p><strong>Date:</strong> 2026-07-19 (B-09, NB-04)  </p>
+<p><strong>Files:</strong> <code>app/(workspace)/tasks/page.tsx</code>, <code>lib/api.ts</code></p>
+
+<p><strong>Root Cause (B-09):</strong> <code>handleSubmitCompletionReview</code> did not pass <code>reviewNotes</code> to the API. <code>handleApproveCompletion</code> did not pass <code>assignerNotes</code>. Both API functions didn't accept or save notes.</p>
+
+<p><strong>Root Cause (NB-04):</strong> Reject dialog title/description was driven by <code>task.status</code> (always <code>pending_completion_review</code>) instead of <code>assignerAction</code>.</p>
+
+<p><strong>Fix:</strong></p>
+<ul><li>API functions now accept <code>notes?</code> parameter and save to DB</li>
+<li>Dialog title/description driven by <code>assignerAction</code> ("Review Progress" / "Approve Completion" / "Reject & Return Task")</li>
+</ul>
+<h3>4.6 Approve Completion Modal Not Closing</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Root Cause:</strong> <code>handleApproveCompletion</code> called <code>setDetailDialogOpen(false)</code> (wrong modal) instead of <code>setAssignerReviewOpen(false)</code>.</p>
+
+<h3>4.7 Assigner Review Modal — Jagged Edge Fix</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Root Cause:</strong> Resizable textarea and long slider pseudo-elements pushed past the 460px modal boundary.</p>
+
+<p><strong>Fix:</strong> Added <code>resize-none</code> to textarea, <code>min-w-0</code> to content/slider wrappers.</p>
+
+<h3>4.8 Remove Automatic 15% Progress Jump</h3>
+<p><strong>Date:</strong> 2026-07-19 (NB-03)  </p>
+<p><strong>Files:</strong> <code>lib/api.ts</code>, <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Root Cause:</strong> <code>tasksAPI.startTask()</code> set <code>progress: 15</code> — misleading because no actual progress update was submitted.</p>
+
+<p><strong>Fix:</strong> Changed to <code>progress: 0</code>. Toast updated to "Task is now in progress. Submit a progress update when ready."</p>
+
+<h3>4.9 Past Date/Time Validation</h3>
+<p><strong>Date:</strong> 2026-07-19 (NB-01, NB-02)  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Changes:</strong></p>
+<ul><li>Due Date input: <code>min={todayStr}</code> — past dates greyed out</li>
+<li>Due Time input: <code>min</code> conditional on today being selected</li>
+<li>Changing date clears the time field</li>
+<li><code>handleCreateTask</code>: past-datetime guard with toast</li>
+</ul>
+<h3>4.10 Archived Tasks Tab</h3>
+<p><strong>Date:</strong> 2026-07-19 (UI-03)  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Changes:</strong></p>
+<ul><li>"Archived" tab added to <code>TAB_LABELS</code> (managers only)</li>
+<li><code>getTasksByStatus("archived")</code> reads from raw <code>tasks</code> array (bypasses <code>activeTasks</code>)</li>
+<li>Styled with amber tint when active</li>
+</ul>
+<h3>4.11 Nearest Deadline Sort</h3>
+<p><strong>Date:</strong> 2026-07-15  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Changes:</strong></p>
+<ul><li>New sort option: cycles Date assigned → Priority → Nearest Deadline</li>
+<li>Nearest Deadline uses <code>Math.abs(dueDate - Date.now())</code> — tasks without deadlines pushed to bottom</li>
+<li>Fixed "Date assigned" sort to correctly use <code>createdAt</code> (was incorrectly using <code>dueDate</code>)</li>
+</ul>
+<hr>
+
+<h2>5. Task Management — UI & Validation</h2>
+
+<h3>5.1 Modal Viewport Overflow</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Fix:</strong> Added <code>max-h-[90vh]</code> to <code>DialogContent</code> — caps modal at 90% viewport height. Existing flex layout handles header/content/footer scroll correctly.</p>
+
+<h3>5.2 Floating Assign Button + Button Sizing</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Root Cause:</strong> <code>sticky bottom-0</code> inside Radix's CSS grid didn't anchor properly.</p>
+
+<p><strong>Fix:</strong> Restructured to <code>flex flex-col overflow-hidden p-6</code> with <code>flex-shrink-0</code> header/footer and <code>flex-1 min-h-0 overflow-y-auto</code> content.</p>
+
+<h3>5.3 Title Input Overflow + Chip Overflow</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Fix:</strong> Added <code>min-w-0 overflow-x-hidden</code> to scrollable wrapper, <code>w-full box-border</code> to title input, <code>max-w-full</code> + <code>truncate</code> to chips.</p>
+
+<h3>5.4 Tasks UI/UX Improvements (U-T1 through U-T5)</h3>
+<p><strong>Date:</strong> 2026-07-15  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<table><thead><tr><th>ID</th><th>Change</th></tr></thead><tbody><tr><td>U-T1</td><td>Archive: <code>handleArchiveTask</code> sets status "archived"; active tasks pre-filtered</td></tr><tr><td>U-T2</td><td>Employees see "Assigned MMM d" on task cards</td></tr><tr><td>U-T3</td><td>Disabled Submit button removed entirely (only shown when actionable)</td></tr><tr><td>U-T4</td><td>Start Milestone hidden when one is already in progress</td></tr><tr><td>U-T5</td><td>Updated toast messages for start task/milestone</td></tr></tbody></table>
+
+<hr>
+
+<h2>6. Milestone System</h2>
+
+<h3>6.1 Milestone Schema + Full Implementation</h3>
+<p><strong>Date:</strong> 2026-07-06 (fixed 2026-07-07)  </p>
+<p><strong>Files:</strong> <code>components/migrations/011-task-milestones.sql</code>, <code>lib/api.ts</code>, <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Schema:</strong></p>
+<ul><li><code>task_milestones</code> table: id, task_id, title, description, order_index, weight, status, due_date, timestamps</li>
+<li><code>milestone_reviews</code> table: id, milestone_id, comment, decision, employee/reviewer file fields</li>
+<li>Status enum: <code>not_started → in_progress → pending_review → needs_revision/approved</code></li>
+<li>RLS policies piggyback on parent task visibility</li>
+</ul>
+<p><strong>11 API Functions:</strong> <code>getTaskMilestones</code>, <code>getNextActionableMilestone</code>, <code>startMilestone</code>, <code>submitMilestoneReview</code>, <code>approveMilestone</code>, <code>rejectMilestone</code>, <code>recalculateMilestoneProgress</code>, <code>allMilestonesApproved</code>, <code>updateMilestone</code>, <code>deleteMilestone</code>, <code>reorderMilestones</code></p>
+
+<p><strong>Key Behaviors:</strong></p>
+<ul><li>Sequential ordering enforced at API level (not just UI)</li>
+<li>Weight must sum to 100% (validated on save)</li>
+<li>Completion review gated behind all milestones approved</li>
+<li>Progress = sum of approved milestone weights</li>
+</ul>
+<h3>6.2 Schema Fix — Live DB Incompatibilities</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>File:</strong> <code>components/migrations/012-fix-milestone-schema.sql</code></p>
+
+<p><strong>Root Cause:</strong> Live DB had old incompatible <code>task_milestones</code> table. <code>CREATE TABLE IF NOT EXISTS</code> silently skipped creation.</p>
+
+<p><strong>Fix:</strong> Surgical ALTER migration — drops orphaned triggers, migrates status values, adds <code>weight</code> column, alters <code>due_date</code> type.</p>
+
+<h3>6.3 Start Milestone Targeting Wrong Milestone</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Root Cause:</strong> <code>handleStartTask</code> hardcoded <code>order_index === 0</code> — always targeting milestone 1.</p>
+
+<p><strong>Fix:</strong> Replaced with <code>getNextActionableMilestone(taskId)</code>.</p>
+
+<h3>6.4 Missing Start Milestone for Later Milestones</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Root Cause:</strong> Button gated on <code>detailTask.status === "todo"</code> — disappeared after first milestone approved.</p>
+
+<p><strong>Fix:</strong> Removed status gate; button now uses <code>getNextActionableIndex()</code>.</p>
+
+<h3>6.5 RLS Fix — Employee Milestone Updates</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>Files:</strong> <code>app/(workspace)/tasks/page.tsx</code>, <code>lib/api.ts</code>, SQL migration</p>
+
+<p><strong>Root Cause:</strong> <code>milestones_update</code> RLS restricted UPDATE to task assigner only. Employee starts/submits were silently rejected.</p>
+
+<p><strong>Fix:</strong> New RLS policy allows UPDATE by both assignees and assigner.</p>
+
+<h3>6.6 Milestone Bugs — Resubmission, Validation, Weights</h3>
+<p><strong>Date:</strong> 2026-07-15 (B-04 through B-07)  </p>
+<p><strong>Files:</strong> <code>lib/api.ts</code>, <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<table><thead><tr><th>Bug</th><th>Root Cause</th><th>Fix</th></tr></thead><tbody><tr><td>B-06</td><td><code>submitMilestoneReview</code> blocked <code>needs_revision</code> status</td><td>Accept <code>in_progress</code> OR <code>needs_revision</code></td></tr><tr><td>B-04</td><td>No file requirement on milestone submissions</td><td>Added file check with toast</td></tr><tr><td>B-05</td><td>No comment validation on rejections</td><td>Added empty check; Reject button disabled when empty</td></tr><tr><td>B-07</td><td>Weight saved without 100% sum check</td><td>Added sum validation with toast</td></tr></tbody></table>
+
+<h3>6.7 Milestone Comment Visibility + Status Sync</h3>
+<p><strong>Date:</strong> 2026-07-19 (B-04, B-05, B-06, NB-05)  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Changes:</strong></p>
+<ul><li>Blue-tinted employee comment block visible to Chief during review</li>
+<li>Red-tinted reviewer feedback block visible to Employee on rejection</li>
+<li>Added <code>await fetchTasks()</code> after milestone submit/reject for card sync</li>
+</ul>
+<h3>6.8 Milestone Date Validation + Edit Fix + Weight Display + Add UX</h3>
+<p><strong>Date:</strong> 2026-07-19 (NB-06, NB-07, NB-08, UI-04)  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<table><thead><tr><th>Issue</th><th>Fix</th></tr></thead><tbody><tr><td>NB-06: No <code>min</code> on date inputs</td><td>Added <code>min={todayStr}</code> + conditional time <code>min</code></td></tr><tr><td>NB-07: Edit dialog date reset on keystroke</td><td>Pre-populate <code>dueDate</code>/<code>dueTime</code> from <code>due_datetime</code></td></tr><tr><td>NB-08: No weight budget feedback</td><td>Live indicator showing remaining % (yellow/green)</td></tr><tr><td>UI-04: Ghost "Add" button overlooked</td><td>Changed to primary <code>TaskButton</code> with "Add Milestone" label</td></tr></tbody></table>
+
+<h3>6.9 Mandatory Due Dates + Submission Lock/Unlock</h3>
+<p><strong>Date:</strong> 2026-07-15  </p>
+<p><strong>Files:</strong> <code>lib/api.ts</code>, <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Changes:</strong></p>
+<ul><li>Due Date & Time mandatory on task and milestone creation (inline red-bordered validation)</li>
+<li><code>toggleMilestoneSubmission</code> function to toggle <code>submission_open</code> per milestone</li>
+<li>Assignee blocked from submitting on closed milestones (disabled "Closed" button)</li>
+<li>Milestone due datetime displayed in stepper rows</li>
+</ul>
+<hr>
+
+<h2>7. File Upload & Storage</h2>
+
+<h3>7.1 File Upload Consolidation</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>Files:</strong> <code>lib/file-utils.ts</code> (new), <code>lib/api.ts</code>, <code>app/(workspace)/tasks/page.tsx</code>, <code>app/(workspace)/vault/page.tsx</code></p>
+
+<p><strong>Root Cause:</strong> 7 separate inline upload implementations existed — each repeating 25 lines of validation/upload code.</p>
+
+<p><strong>Changes:</strong></p>
+<ul><li>Created <code>lib/file-utils.ts</code> with three shared functions: <code>uploadFile()</code>, <code>getSignedFileUrl()</code>, <code>downloadFile()</code></li>
+<li>All 7 upload paths refactored to use <code>uploadFile()</code> (~120 lines of duplication eliminated)</li>
+<li>All file-open buttons switched from <code>window.open(signedUrl)</code> to blob-based <code>downloadFile()</code> for reliable cross-browser downloads</li>
+</ul>
+<h3>7.2 Reviewer File Persistence Fix</h3>
+<p><strong>Date:</strong> 2026-07-06  </p>
+<p><strong>File:</strong> <code>lib/api.ts</code></p>
+
+<p><strong>Root Cause:</strong> <code>uploadReviewerFile()</code> returned <code>{ fileUrl, fileName, fileSize }</code> but consumers destructured <code>{ url, name, size }</code>. Undefined values were silently dropped from UPDATE payloads.</p>
+
+<h3>7.3 Storage RLS URL/Path Mismatch</h3>
+<p><strong>Date:</strong> 2026-07-06  </p>
+<p><strong>File:</strong> <code>components/migrations/010-fix-storage-rls-url-match.sql</code></p>
+
+<p><strong>Root Cause:</strong> RLS compared <code>storage.objects.name</code> (raw path) against <code>tasks.*_file_url</code> (full public URL). These never match for non-owners.</p>
+
+<p><strong>Fix:</strong> Changed to <code>LIKE '%/uploads/' || storage.objects.name</code> suffix matching.</p>
+
+<h3>7.4 Milestone File RLS Extension</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>File:</strong> SQL migration (manual run required)</p>
+
+<p><strong>Root Cause:</strong> <code>storage_read_own</code> only checked <code>tasks</code> columns. Milestone files in <code>milestone_reviews</code> were invisible to RLS.</p>
+
+<p><strong>Fix:</strong> Extended policy to also check <code>milestone_reviews.employee_file_url</code> and <code>milestone_reviews.reviewer_file_url</code> via JOIN through <code>task_milestones → tasks</code>.</p>
+
+<h3>7.5 Optional File on Progress Reviews</h3>
+<p><strong>Date:</strong> 2026-07-06  </p>
+<p><strong>Files:</strong> <code>lib/api.ts</code>, <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Changes:</strong> Progress review submissions now support optional file attachment (blue-themed drop-zone). Uses same <code>review_assigner_file_*</code> columns. Assigner's later file intentionally overwrites.</p>
+
+<hr>
+
+<h2>8. Vault Module</h2>
+
+<h3>8.1 Vault Feature — Full Implementation</h3>
+<p><strong>Date:</strong> Retroactive  </p>
+<p><strong>Files:</strong> <code>components/migrations/003-vault-module.sql</code>, <code>lib/api.ts</code>, <code>app/(workspace)/vault/page.tsx</code>, <code>components/admin-layout.tsx</code></p>
+
+<p><strong>Schema:</strong> <code>vault_items</code> table with <code>category CHECK ('document','api_key','password','other')</code>. RLS: CEO/C_LEVEL only (read, insert, update-own, delete-own).</p>
+
+<p><strong>UI:</strong> Category tabs, search, add/edit dialog, document download (signed URL), API key/password reveal toggle, delete confirmation.</p>
+
+<h3>8.2 Vault — Require Sensitive Value</h3>
+<p><strong>Date:</strong> 2026-07-15 (B-01)  </p>
+<p><strong>File:</strong> <code>app/(workspace)/vault/page.tsx</code></p>
+
+<p><strong>Root Cause:</strong> <code>handleSave</code> only validated <code>form.title</code>. Users could create entries with empty passwords/API keys.</p>
+
+<h3>8.3 Vault UI/UX Improvements (U-V1 through U-V5)</h3>
+<p><strong>Date:</strong> 2026-07-15  </p>
+<p><strong>File:</strong> <code>app/(workspace)/vault/page.tsx</code></p>
+
+<table><thead><tr><th>ID</th><th>Change</th></tr></thead><tbody><tr><td>U-V1/V2</td><td>File input redesigned — hidden <code><input></code> + custom label, single filename display</td></tr><tr><td>U-V3</td><td>Document card shows filename (truncated) separately from file size</td></tr><tr><td>U-V4</td><td>Category badges updated to higher-contrast colors</td></tr><tr><td>U-V5</td><td>Reveal section uses fixed <code>min-h-[40px]</code> — prevents card shift</td></tr></tbody></table>
+
+<h3>8.4 Vault — Card Height Uniformity</h3>
+<p><strong>Date:</strong> 2026-07-19 (UI-01, UI-02, + CSS Grid Fix)  </p>
+<p><strong>File:</strong> <code>app/(workspace)/vault/page.tsx</code></p>
+
+<p><strong>Phase 1 (Inner heights):</strong></p>
+<ul><li><code>CardContent</code> given <code>flex flex-col</code></li>
+<li>Description wrapped in <code>min-h-[36px]</code> container</li>
+<li>"Other" text_value wrapped in <code>min-h-[52px]</code> container</li>
+<li>Footer: <code>mt-3</code> → <code>mt-auto pt-3</code></li>
+</ul>
+<p><strong>Phase 2 (Outer grid stretch):</strong></p>
+<ul><li><code>motion.div</code> wrapper: added <code>className="h-full"</code></li>
+<li><code>Card</code>: added <code>h-full flex flex-col</code></li>
+<li><code>CardContent</code>: added <code>flex-1</code></li>
+</ul>
+<hr>
+
+<h2>9. Calendar Module</h2>
+
+<h3>9.1 Calendar — Full Implementation</h3>
+<p><strong>Date:</strong> Retroactive  </p>
+<p><strong>Files:</strong> <code>app/(workspace)/calendar/page.tsx</code>, <code>lib/api.ts</code>, API routes</p>
+
+<p><strong>Features:</strong> Month/week/day views, event creation (CEO/C_LEVEL/LEAD only), meeting type with email invites (SendGrid + ICS), Google Calendar integration, attendee management.</p>
+
+<p><strong>Migrations:</strong> <code>create-calendar-events-table.sql</code>, <code>004-meetings-rls-fix.sql</code>, <code>005-calendar-add-meeting-link.sql</code></p>
+
+<h3>9.2 Calendar — Full UI Redesign (Dark Theme)</h3>
+<p><strong>Date:</strong> 2026-07-19  </p>
+<p><strong>File:</strong> <code>app/(workspace)/calendar/page.tsx</code></p>
+
+<p><strong>Changes:</strong></p>
+<ul><li>Page background: <code>#0B0F1A</code></li>
+<li>Hero: compact dark card with role badge</li>
+<li>Navigation: flat inline (prev/next arrows + month title + "Today" pill)</li>
+<li>Month grid: <code>bg-[#121826]</code> cells with <code>gap-[1px]</code> hairline separators</li>
+<li>Today cell: <code>ring-1 ring-[#3B82F6]/30</code> + blue date circle</li>
+<li>Event pills: dark semi-transparent tints (blue for events, purple for meetings)</li>
+<li>Day view + Event details dialog: fully dark-themed</li>
+</ul>
+<blockquote><strong>QA Checklist:</strong><br>- [ ] Page background is <code>#0B0F1A</code><br>- [ ] View switcher (Day/Week/Month) — pill style toggle works<br>- [ ] Navigation arrows cycle months correctly<br>- [ ] "Today" button navigates to current date<br>- [ ] Today's cell has blue ring + blue date number<br>- [ ] Event pills readable on dark background<br>- [ ] Day view renders event cards correctly<br>- [ ] Event creation dialog still functional<br>- [ ] All button handlers fire correctly</blockquote>
+
+<hr>
+
+<h2>10. C-Level Dashboard</h2>
+
+<h3>10.1 Dashboard — Full UI Redesign</h3>
+<p><strong>Date:</strong> 2026-07-19  </p>
+<p><strong>File:</strong> <code>app/(workspace)/admin/c-level/page.tsx</code></p>
+
+<p><strong>Changes:</strong></p>
+<ul><li>Page: <code>#0B0F1A</code> background</li>
+<li>Hero: compact dark card with role badge, date chip, "Operations Active" status</li>
+<li>Stat cards: gradient left-border accents, large faded background icons, <code>text-[36px]</code> numbers, hover glow effects</li>
+<li>Tab bar: pill-style matching Tasks page pattern</li>
+<li>Tab panels: dark containers with header row separated by border from content</li>
+<li>Removed all <code>Card</code>/<code>CardContent</code>/etc. shadcn imports</li>
+</ul>
+<blockquote><strong>QA Checklist:</strong><br>- [ ] Page background is <code>#0B0F1A</code><br>- [ ] 3 stat cards with colored left borders and hover glow<br>- [ ] Tab bar: pill style, active tab has <code>bg-white/10</code><br>- [ ] All buttons (Create Announcement, New Project, New Team) still work<br>- [ ] Sub-components (AnnouncementsList, ProjectsList, TeamsList) render correctly</blockquote>
+
+<hr>
+
+<h2>11. Database Migrations</h2>
+
+<p>All migrations are located in <code>components/migrations/</code> and must be run manually in the Supabase SQL Editor.</p>
+
+<table><thead><tr><th>Migration</th><th>Purpose</th><th>Date</th></tr></thead><tbody><tr><td><code>001-task-module-overhaul.sql</code></td><td>Schema overhaul + RLS rewrite + due_datetime + notified column</td><td>Retroactive</td></tr><tr><td><code>003-vault-module.sql</code></td><td>vault_items table + vault bucket RLS</td><td>Retroactive</td></tr><tr><td><code>004-meetings-rls-fix.sql</code></td><td>Role-restricted calendar event CRUD</td><td>Retroactive</td></tr><tr><td><code>005-calendar-add-meeting-link.sql</code></td><td>meeting_link column</td><td>Retroactive</td></tr><tr><td><code>006-multi-assignee-schema.sql</code></td><td>assignee_ids/viewer_ids array columns + GIN indexes</td><td>2026-07-04</td></tr><tr><td><code>007-drop-project-id-constraint.sql</code></td><td>Remove stale project_id NOT NULL constraint</td><td>2026-07-04</td></tr><tr><td><code>008-review-workflow-schema.sql</code></td><td>review_notes/assigner_notes/progress columns + status CHECK + RLS guard</td><td>2026-07-04</td></tr><tr><td><code>009-reviewer-file-rls-fix.sql</code></td><td>reviewer file columns + storage RLS rebuild</td><td>2026-07-04</td></tr><tr><td><code>010-fix-storage-rls-url-match.sql</code></td><td>Storage RLS LIKE-based URL/path matching</td><td>2026-07-06</td></tr><tr><td><code>011-task-milestones.sql</code></td><td>task_milestones + milestone_reviews tables + RLS</td><td>2026-07-06</td></tr><tr><td><code>012-fix-milestone-schema.sql</code></td><td>Patch live DB incompatibilities (status enum, weight, due_date type)</td><td>2026-07-07</td></tr></tbody></table>
+
+<p><strong>Inline SQL (manual run):</strong></p>
+<ul><li>Milestone UPDATE RLS — allows both assignees and assigner to update milestones</li>
+<li>Extended <code>storage_read_own</code> — covers <code>milestone_reviews</code> file columns</li>
+</ul>
+<hr>
+
+<h2>12. Documentation & Tooling</h2>
+
+<h3>12.1 Technical Documentation</h3>
+<p><strong>Date:</strong> 2026-07-04  </p>
+<p><strong>Files:</strong> <code>CHAT.md</code>, <code>TEAMS.md</code>, <code>FILES.md</code></p>
+
+<p>Full technical documentation covering data models, backend logic, realtime behavior, frontend logic, permissions matrices, and edge cases for Chat, Teams, and Files modules.</p>
+
+<h3>12.2 Seed Script Expansion</h3>
+<p><strong>Date:</strong> 2026-07-04  </p>
+<p><strong>File:</strong> <code>scripts/seed-initial-users.ts</code></p>
+
+<p>Expanded from 1 CEO user to 4 test users across all roles (CEO, C_LEVEL, LEAD, EMPLOYEE). Added idempotency and <code>--force</code> flag.</p>
+
+<hr>
+
+<h2>13. Build & Syntax Fixes</h2>
+
+<h3>13.1 Duplicate getTasksByStatus Declaration</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Root Cause:</strong> Second declaration introduced during redesign; original not removed. Build error: <code>Identifier has already been declared</code>.</p>
+
+<h3>13.2 Missing Closing Div — Milestone Stepper</h3>
+<p><strong>Date:</strong> 2026-07-07  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Root Cause:</strong> <code><div key={m.id}></code> wrapper added for expandable descriptions but closing <code></div></code> was missing. Cascading parse failure.</p>
+
+<h3>13.3 Extra Closing Div — Milestone Builder</h3>
+<p><strong>Date:</strong> 2026-07-19  </p>
+<p><strong>File:</strong> <code>app/(workspace)/tasks/page.tsx</code></p>
+
+<p><strong>Root Cause:</strong> Extra <code></div></code> left behind during milestone date input update. Prematurely closed parent element; JSX error <code>Expected '</', got '{'</code> on Netlify build.</p>
+
+<hr>
+
+<h2>14. Complete File Impact Matrix</h2>
+
+<p>This table shows every file modified during the project and the number of changes it received.</p>
+
+<table><thead><tr><th>File Path</th><th># Changes</th><th>Category</th></tr></thead><tbody><tr><td><code>app/(workspace)/tasks/page.tsx</code></td><td><strong>28</strong></td><td>Task Management</td></tr><tr><td><code>lib/api.ts</code></td><td><strong>14</strong></td><td>API Layer</td></tr><tr><td><code>app/(workspace)/vault/page.tsx</code></td><td><strong>5</strong></td><td>Vault</td></tr><tr><td><code>app/login/page.tsx</code></td><td><strong>3</strong></td><td>Authentication</td></tr><tr><td><code>app/(workspace)/calendar/page.tsx</code></td><td><strong>2</strong></td><td>Calendar</td></tr><tr><td><code>app/(workspace)/admin/c-level/page.tsx</code></td><td><strong>1</strong></td><td>Dashboard</td></tr><tr><td><code>lib/file-utils.ts</code></td><td><strong>1</strong> (new)</td><td>File Utilities</td></tr><tr><td><code>lib/types.ts</code></td><td><strong>4</strong></td><td>Type Definitions</td></tr><tr><td><code>lib/firebase-types.ts</code></td><td><strong>2</strong></td><td>Type Aliases</td></tr><tr><td><code>components/tasks/status-pill.tsx</code></td><td><strong>2</strong> (new + fix)</td><td>UI Component</td></tr><tr><td><code>components/tasks/priority-pill.tsx</code></td><td><strong>2</strong> (new + fix)</td><td>UI Component</td></tr><tr><td><code>components/tasks/milestone-status-badge.tsx</code></td><td><strong>1</strong> (new)</td><td>UI Component</td></tr><tr><td><code>components/tasks/file-drop-zone.tsx</code></td><td><strong>2</strong> (new + polish)</td><td>UI Component</td></tr><tr><td><code>components/tasks/task-button.tsx</code></td><td><strong>2</strong> (new + polish)</td><td>UI Component</td></tr><tr><td><code>components/tasks/card-progress-bar.tsx</code></td><td><strong>1</strong> (new)</td><td>UI Component</td></tr><tr><td><code>components/tasks/progress-ring.tsx</code></td><td><strong>1</strong> (new)</td><td>UI Component</td></tr><tr><td><code>components/admin-layout.tsx</code></td><td><strong>1</strong></td><td>Sidebar Nav</td></tr><tr><td><code>scripts/seed-initial-users.ts</code></td><td><strong>1</strong></td><td>Tooling</td></tr><tr><td><code>CHAT.md</code></td><td><strong>1</strong> (new)</td><td>Documentation</td></tr><tr><td><code>TEAMS.md</code></td><td><strong>1</strong> (new)</td><td>Documentation</td></tr><tr><td><code>FILES.md</code></td><td><strong>1</strong> (new)</td><td>Documentation</td></tr><tr><td><code>supabase/CHANGES.md</code></td><td><strong>40+</strong></td><td>Change Log</td></tr><tr><td>11 SQL migration files</td><td><strong>1 each</strong></td><td>Database</td></tr></tbody></table>
+
+<hr>
+
+<h2>15. Master Regression Checklist</h2>
+
+<p>This is the comprehensive end-to-end checklist for QA to validate the complete system.</p>
+
+<h3>Authentication</h3>
+<div class="check-item"><span class="checkbox">☐</span> Mobile login: single column, no dual rendering</div>
+<div class="check-item"><span class="checkbox">☐</span> Password show/hide toggle works on desktop and mobile</div>
+<div class="check-item"><span class="checkbox">☐</span> "Forgot password?" link fully removed</div>
+<div class="check-item"><span class="checkbox">☐</span> Login with valid credentials succeeds</div>
+
+<h3>Task Lifecycle — Non-Milestone</h3>
+<div class="check-item"><span class="checkbox">☐</span> Manager creates task with title + description + assignee + due date/time → succeeds</div>
+<div class="check-item"><span class="checkbox">☐</span> Task creation blocked if description, assignee, due date, or due time is empty</div>
+<div class="check-item"><span class="checkbox">☐</span> Past dates greyed out in date picker; past times blocked when today is selected</div>
+<div class="check-item"><span class="checkbox">☐</span> Employee starts task → progress = 0%, status = "In Progress"</div>
+<div class="check-item"><span class="checkbox">☐</span> Employee submits progress review (optional file) → status = "Pending Review"</div>
+<div class="check-item"><span class="checkbox">☐</span> Manager reviews, sets progress % → task returns to "In Progress"</div>
+<div class="check-item"><span class="checkbox">☐</span> Employee submits completion review (mandatory file) → status = "Final Review"</div>
+<div class="check-item"><span class="checkbox">☐</span> Manager approves → status = "Completed", progress = 100%</div>
+<div class="check-item"><span class="checkbox">☐</span> Manager rejects with feedback → returns to "In Progress", feedback visible</div>
+<div class="check-item"><span class="checkbox">☐</span> Reject dialog shows "Reject & Return Task" title (not "Approve Completion")</div>
+
+<h3>Task Lifecycle — Milestone</h3>
+<div class="check-item"><span class="checkbox">☐</span> Create task with milestones: all milestones persisted</div>
+<div class="check-item"><span class="checkbox">☐</span> Milestone fields are mandatory (title, description, due date, due time)</div>
+<div class="check-item"><span class="checkbox">☐</span> Start Milestone → first milestone enters "In Progress"</div>
+<div class="check-item"><span class="checkbox">☐</span> Sequential locking: cannot start M2 before M1 approved</div>
+<div class="check-item"><span class="checkbox">☐</span> Submit milestone with file + comment → "Pending Review"</div>
+<div class="check-item"><span class="checkbox">☐</span> Chief sees employee comment in blue box below milestone row</div>
+<div class="check-item"><span class="checkbox">☐</span> Chief approves → milestone "Approved", progress recalculated</div>
+<div class="check-item"><span class="checkbox">☐</span> Chief rejects with feedback → "Needs Revision"</div>
+<div class="check-item"><span class="checkbox">☐</span> Employee sees rejection feedback in red box below milestone row</div>
+<div class="check-item"><span class="checkbox">☐</span> Employee can resubmit rejected milestones</div>
+<div class="check-item"><span class="checkbox">☐</span> All milestones approved → completion review unlocked</div>
+<div class="check-item"><span class="checkbox">☐</span> Manage Milestones: add/edit/reorder/delete all work</div>
+<div class="check-item"><span class="checkbox">☐</span> Live weight budget indicator: yellow when ≠ 100%, green when = 100%</div>
+<div class="check-item"><span class="checkbox">☐</span> Milestone date inputs block past dates</div>
+<div class="check-item"><span class="checkbox">☐</span> Edit milestone: date/time pre-filled, no reset on keystroke</div>
+<div class="check-item"><span class="checkbox">☐</span> Lock/unlock milestone submission toggle works for assigners</div>
+
+<h3>Task UI</h3>
+<div class="check-item"><span class="checkbox">☐</span> All task cards in same row are identical height</div>
+<div class="check-item"><span class="checkbox">☐</span> Status/priority pills never wrap</div>
+<div class="check-item"><span class="checkbox">☐</span> Assignee names truncate with ellipsis</div>
+<div class="check-item"><span class="checkbox">☐</span> Sort cycles: Date assigned → Priority → Nearest Deadline</div>
+<div class="check-item"><span class="checkbox">☐</span> Nearest Deadline brings imminent tasks to top</div>
+<div class="check-item"><span class="checkbox">☐</span> "Archived" tab visible for managers only</div>
+<div class="check-item"><span class="checkbox">☐</span> Archived tab shows archived tasks</div>
+<div class="check-item"><span class="checkbox">☐</span> C-Level "My Tasks" tab shows own tasks</div>
+<div class="check-item"><span class="checkbox">☐</span> C-Level sees all tasks (read-only for foreign)</div>
+<div class="check-item"><span class="checkbox">☐</span> Assign modal: scrollable with sticky footer</div>
+
+<h3>Vault</h3>
+<div class="check-item"><span class="checkbox">☐</span> Only CEO/C_LEVEL can access Vault</div>
+<div class="check-item"><span class="checkbox">☐</span> Create password/API key/other: sensitive value required</div>
+<div class="check-item"><span class="checkbox">☐</span> Create document: file upload works</div>
+<div class="check-item"><span class="checkbox">☐</span> All cards in same row are identical height</div>
+<div class="check-item"><span class="checkbox">☐</span> Reveal toggle doesn't shift adjacent cards</div>
+<div class="check-item"><span class="checkbox">☐</span> "Added by" footer pinned to bottom on all cards</div>
+<div class="check-item"><span class="checkbox">☐</span> Edit/delete restricted to item creator</div>
+<div class="check-item"><span class="checkbox">☐</span> Download triggers blob-based auto-download</div>
+
+<h3>Calendar</h3>
+<div class="check-item"><span class="checkbox">☐</span> Dark theme applied consistently</div>
+<div class="check-item"><span class="checkbox">☐</span> Month/Week/Day view switching works</div>
+<div class="check-item"><span class="checkbox">☐</span> Navigation arrows + "Today" button work</div>
+<div class="check-item"><span class="checkbox">☐</span> Today's cell highlighted with blue ring</div>
+<div class="check-item"><span class="checkbox">☐</span> Event creation dialog functional (CEO/C_LEVEL/LEAD only)</div>
+<div class="check-item"><span class="checkbox">☐</span> Event pills readable on dark cells</div>
+
+<h3>C-Level Dashboard</h3>
+<div class="check-item"><span class="checkbox">☐</span> Dark theme applied</div>
+<div class="check-item"><span class="checkbox">☐</span> Stat cards: colored borders + hover glow</div>
+<div class="check-item"><span class="checkbox">☐</span> Tab bar: pill style navigation</div>
+<div class="check-item"><span class="checkbox">☐</span> All create buttons (Announcement, Project, Team) functional</div>
+
+<h3>File System</h3>
+<div class="check-item"><span class="checkbox">☐</span> All file downloads use blob-based approach (not <code>window.open</code>)</div>
+<div class="check-item"><span class="checkbox">☐</span> Original filenames preserved</div>
+<div class="check-item"><span class="checkbox">☐</span> Milestone files accessible to both assignee and assigner</div>
+<div class="check-item"><span class="checkbox">☐</span> Vault files auto-download with correct name</div>
+
+<h3>Build</h3>
+<div class="check-item"><span class="checkbox">☐</span> <code>npx tsc --noEmit</code> passes with zero errors</div>
+<div class="check-item"><span class="checkbox">☐</span> <code>npm run build</code> / Netlify deployment succeeds</div>
+<div class="check-item"><span class="checkbox">☐</span> No console errors on page load</div>
+
+<hr>
+
+<div class="centered">
+
+<p><em>— End of QA Change Report —</em></p>
+
+<p><strong>Finova Workspace</strong> | Architecture & Planning Team | July 2026</p>
+
+</div>
+<p>]]></p>
+
+</body>
+</html>

@@ -1,5 +1,70 @@
 # Changes Log — Finova Workspace
 
+## [2026-07-22] Calendar — Event Date/Time Validation Enforcement
+### Status: Completed
+### Root Cause
+Date and time fields initialized with valid defaults (`new Date()`, `"09:00"`, `"10:00"`), completely skipping the empty-field validation check at creation time.
+### Actual Changes Made
+- Changed `selectedDate` initial value from `new Date()` to `undefined`.
+- Changed `startTime` and `endTime` initial values from `"09:00"` / `"10:00"` to `""`.
+- Updated `resetForm()` to match — resets to `undefined` and `""` respectively.
+### Files Touched
+- `app/(workspace)/calendar/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-22] Tasks — Milestone Lock Recovery on Rejection
+### Status: Completed
+### Root Cause
+Lock toggle button only rendered for `in_progress` and `pending_review` statuses. When the Chief rejected a locked milestone, it transitioned to `needs_revision` — hiding the lock button and leaving the employee permanently blocked from resubmitting.
+### Actual Changes Made
+- Added `m.status === "needs_revision"` to the lock toggle visibility condition, allowing the assigner to re-open submissions on rejected milestones.
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-22] Tasks — Fix Phased Task Progress Reset
+### Status: Completed
+### Root Cause
+`startTask` blindly overwrote `progress: 0` for all tasks including phased (milestone) ones, wiping out milestone-based progress aggregation when starting the second or later milestone.
+### Actual Changes Made
+- Made `progress: 0` in the update payload conditional on `!isPhased` — phased tasks now keep their milestone-computed progress intact.
+### Files Touched
+- `lib/api.ts`
+- `supabase/CHANGES.md`
+
+## [2026-07-22] Tasks — Milestone Past Datetime Validation
+### Status: Completed
+### Root Cause
+`handleCreateTask` only validated the parent task's datetime — milestones with past dates/times would be accepted and only fail at the individual milestone submission stage.
+### Actual Changes Made
+- Added validation loop in `handleCreateTask` that checks every milestone's combined `dueDate` + `dueTime` against the current time before the `try` block. Shows a destructive toast naming the offending milestone.
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-22] Tasks — Inline Datetime Validation Feedback
+### Status: Completed
+### Root Cause
+User received no inline red text indicating which fields were invalid when attempting to submit a past datetime — only a destructive toast was shown.
+### Actual Changes Made
+- Added `pastDatetimeError` state variable.
+- Set to `true` in `handleCreateTask` when constructed datetime is in the past.
+- Reset to `false` in both Due Date and Due Time `onChange` handlers.
+- Inline red error message "Due date and time cannot be in the past." rendered beneath Due Time input.
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-22] Vault — Reveal/Hide Layout Stability
+### Status: Completed
+### Root Cause
+`min-h-[40px]` was allowing long revealed API keys to stretch the container, causing sibling cards in the grid to shift.
+### Actual Changes Made
+- Replaced `min-h-[40px]` with `h-[80px] overflow-y-auto` on the sensitive data container wrapper.
+### Files Touched
+- `app/(workspace)/vault/page.tsx`
+- `supabase/CHANGES.md`
+
 ## [2026-07-19] Tasks — Fixed JSX Syntax Error in Milestone Builder
 ### Status: Completed
 ### Root Cause

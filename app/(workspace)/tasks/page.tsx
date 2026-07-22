@@ -44,6 +44,7 @@ export default function TasksPage() {
   const [assigneeError, setAssigneeError] = useState(false)
   const [dueDateError, setDueDateError] = useState(false)
   const [dueTimeError, setDueTimeError] = useState(false)
+  const [pastDatetimeError, setPastDatetimeError] = useState(false)
   const [milestoneFormError, setMilestoneFormError] = useState(false)
   const [activeTab, setActiveTab] = useState("all")
 
@@ -364,12 +365,29 @@ export default function TasksPage() {
     // Validate: combined datetime must not be in the past
     const constructedDt = new Date(`${newTask.dueDate}T${newTask.dueTime}:00`)
     if (constructedDt < new Date()) {
+      setPastDatetimeError(true)
       toast({
         title: "Invalid due date/time",
         description: "The due date and time cannot be in the past.",
         variant: "destructive"
       })
       return
+    }
+    // Validate: milestone datetimes must not be in the past
+    if (newTask.useMilestones) {
+      for (const m of newTask.milestones) {
+        if (m.dueDate && m.dueTime) {
+          const mDt = new Date(`${m.dueDate}T${m.dueTime}:00`)
+          if (mDt < new Date()) {
+            toast({
+              title: "Invalid milestone date/time",
+              description: `Milestone "${m.title}" has a due date/time in the past.`,
+              variant: "destructive"
+            })
+            return
+          }
+        }
+      }
     }
     try {
       setIsAddingTask(true)
@@ -716,6 +734,7 @@ export default function TasksPage() {
                       setNewTask({ ...newTask, dueDate: e.target.value, dueTime: "" })
                       setDueDateError(false)
                       setDueTimeError(false)
+                      setPastDatetimeError(false)
                     }}
                     className={`bg-[#0B0F1A] text-[#F1F5F9] rounded-[10px] h-10 text-[14px] color-scheme-dark transition-colors ${dueDateError ? 'border-red-500/60' : 'border-white/[0.08]'}`}
                   />
@@ -751,11 +770,14 @@ export default function TasksPage() {
                     type="time"
                     min={newTask.dueDate === todayStr ? nowTimeStr : undefined}
                     value={newTask.dueTime}
-                    onChange={(e) => { setNewTask({ ...newTask, dueTime: e.target.value }); setDueTimeError(false) }}
+                    onChange={(e) => { setNewTask({ ...newTask, dueTime: e.target.value }); setDueTimeError(false); setPastDatetimeError(false) }}
                     className={`bg-[#0B0F1A] text-[#F1F5F9] rounded-[10px] h-10 text-[14px] color-scheme-dark transition-colors ${dueTimeError ? 'border-red-500/60' : 'border-white/[0.08]'}`}
                   />
                   {dueTimeError && (
                     <p className="text-[12px] text-red-400 mt-0.5">Due time is required.</p>
+                  )}
+                  {pastDatetimeError && (
+                    <p className="text-[12px] text-red-400 mt-0.5">Due date and time cannot be in the past.</p>
                   )}
                 </div>
               </div>
@@ -1010,7 +1032,7 @@ export default function TasksPage() {
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                               {/* Assigner toggle for submission_open */}
-                              {isAssgnr && (m.status === "in_progress" || m.status === "pending_review") && (
+                              {isAssgnr && (m.status === "in_progress" || m.status === "pending_review" || m.status === "needs_revision") && (
                                 <button
                                   type="button"
                                   onClick={() => handleToggleMilestoneSubmission(m.id, m.submission_open !== false)}
@@ -1354,6 +1376,18 @@ export default function TasksPage() {
               <TaskButton onClick={() => handleApproveCompletion(assignerReviewTask!.id)} disabled={isUpdatingTask}>{isUpdatingTask ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}Confirm Approval</TaskButton>
             ) : (
               <TaskButton variant="secondary" onClick={() => handleRejectCompletion(assignerReviewTask!.id)} disabled={isUpdatingTask || !assignerNotes.trim()}>Reject & Return</TaskButton>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+og>
+    </div>
+  )
+}
+ect & Return</TaskButton>
             )}
           </DialogFooter>
         </DialogContent>

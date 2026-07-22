@@ -1023,14 +1023,17 @@ export const tasksAPI = {
       // Check if this is a milestone-based task — if so, skip the flat 15% progress jump
       const { data: task } = await supabase.from("tasks").select("is_phased").eq("id", id).single()
       const isPhased = task?.is_phased || false
+      const updatePayload: any = {
+        status: "in_progress",
+        start_date: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      if (!isPhased) {
+        updatePayload.progress = 0
+      }
       const { data, error } = await supabase
         .from("tasks")
-        .update({
-          status: "in_progress",
-          progress: 0,
-          start_date: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .update(updatePayload)
         .eq("id", id)
         .select()
         .single()

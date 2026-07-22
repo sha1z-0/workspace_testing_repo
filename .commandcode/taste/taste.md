@@ -30,7 +30,11 @@
 - Avoid parallel implementations of the same functionality — when the same feature (file upload, retrieval, download) exists in multiple places, consolidate into a single shared utility so fixes apply everywhere and bugs don't recur from duplicated code drifting out of sync. Confidence: 0.65
 
 # code-style
-- When fixing bugs, make surgical fixes only — don't refactor unrelated code or expand scope beyond the issue at hand. Confidence: 0.65
+- When fixing bugs, make surgical fixes only — don't refactor unrelated code or expand scope beyond the issue at hand. Confidence: 0.70
+- Never remove existing comments, console.error calls, or docstrings when making changes — preserve all existing code annotations. Confidence: 0.70
+
+# prompts
+- When following implementation prompts with line number references, search for the exact code described rather than trusting line numbers — line numbers drift over time and are approximate hints only. Confidence: 0.70
 
 # design-system
 - All workspace dashboard pages use a premium dark theme: page background `#0B0F1A`, card/surface background `#121826`, borders `border-white/[0.06]`, headings `#F1F5F9`, secondary text `#64748B`, accent blue text `#93C5FD`, accent purple text `#C4B5FD`. Cards use `rounded-[14px]`, hero sections use `rounded-[20px]`. Tab bars use pill-style with `bg-[#121826]` wrapper and `data-[state=active]:bg-white/10` for active state. Confidence: 0.80
