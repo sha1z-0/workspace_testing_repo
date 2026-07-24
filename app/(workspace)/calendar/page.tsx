@@ -46,7 +46,8 @@ interface CalendarEvent {
   sendEmailReminder?: boolean;
   addToGoogleCalendar?: boolean;
   notifyOnDashboard?: boolean;
-  createdAt?: Timestamp;
+  meetingLink?: string;
+  createdAt?: any;
 }
 
 // Email service for sending invites and reminders
@@ -153,7 +154,7 @@ const dashboardService = {
       const { usersAPI } = await import('@/lib/api');
 
       // Find users based on email addresses
-      const users = await usersAPI.findUsersByEmails(emailAddresses);
+      const users: any[] = await usersAPI.findUsersByEmails(emailAddresses);
 
       if (users.length === 0) {
         console.log(`No registered users found for emails: ${emailAddresses.join(', ')}`);
@@ -202,14 +203,21 @@ export default function CalendarPage() {
   const [eventType, setEventType] = useState<"event" | "meeting">("event")
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
-  const [startTime, setStartTime] = useState("09:00")
-  const [endTime, setEndTime] = useState("10:00")
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+  const [startTime, setStartTime] = useState("")
+  const [endTime, setEndTime] = useState("")
   const [location, setLocation] = useState("")
   const [meetingLink, setMeetingLink] = useState("")
   const [toEmails, setToEmails] = useState("")
   const [ccEmails, setCcEmails] = useState("")
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([])
+
+  // Validation states
+  const [titleError, setTitleError] = useState(false)
+  const [dateError, setDateError] = useState(false)
+  const [startTimeError, setStartTimeError] = useState(false)
+  const [endTimeError, setEndTimeError] = useState(false)
+  const [pastDatetimeError, setPastDatetimeError] = useState(false)
 
   // Integration options
   const [sendCalendarInvite, setSendCalendarInvite] = useState(true)
@@ -363,7 +371,39 @@ export default function CalendarPage() {
       })
       return
     }
-    if (!title || !selectedDate || !startTime || !endTime) {
+    
+    // Validation
+    let hasError = false
+    let scrollTarget = ""
+
+    if (!title.trim()) { 
+      setTitleError(true); 
+      hasError = true;
+      if (!scrollTarget) scrollTarget = "title-field";
+    } else { setTitleError(false) }
+    
+    if (!selectedDate) { 
+      setDateError(true); 
+      hasError = true;
+      if (!scrollTarget) scrollTarget = "date-field";
+    } else { setDateError(false) }
+    
+    if (!startTime) { 
+      setStartTimeError(true); 
+      hasError = true;
+      if (!scrollTarget) scrollTarget = "time-fields";
+    } else { setStartTimeError(false) }
+    
+    if (!endTime) { 
+      setEndTimeError(true); 
+      hasError = true;
+      if (!scrollTarget) scrollTarget = "time-fields";
+    } else { setEndTimeError(false) }
+
+    if (hasError) {
+      if (scrollTarget) {
+        document.getElementById(scrollTarget)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
       toast({
         title: "Missing fields",
         description: "Please fill in all required fields",
@@ -372,12 +412,27 @@ export default function CalendarPage() {
       return
     }
 
+    // Past datetime check
+    const [startHours, startMinutes] = startTime.split(':').map(Number)
+    const [endHours, endMinutes] = endTime.split(':').map(Number)
+    
+    const startDateTimeCheck = new Date(selectedDate!)
+    startDateTimeCheck.setHours(startHours, startMinutes, 0, 0)
+    
+    if (startDateTimeCheck.getTime() < Date.now()) {
+      setPastDatetimeError(true)
+      toast({
+        title: "Invalid Schedule",
+        description: "Cannot schedule events in the past.",
+        variant: "destructive",
+      })
+      return
+    } else {
+      setPastDatetimeError(false)
+    }
+
     try {
       setCreatingEvent(true)
-
-      // Extract hours and minutes from time strings
-      const [startHours, startMinutes] = startTime.split(':').map(Number)
-      const [endHours, endMinutes] = endTime.split(':').map(Number)
 
       // Create Date objects for start and end times
       const startDate = new Date(selectedDate!)
@@ -587,6 +642,11 @@ export default function CalendarPage() {
     setSendEmailReminder(true)
     setAddToGoogleCalendar(false)
     setNotifyOnDashboard(true)
+    setTitleError(false)
+    setDateError(false)
+    setStartTimeError(false)
+    setEndTimeError(false)
+    setPastDatetimeError(false)
   }
 
   const handleCCEmployeeSelect = (userId: string) => {
@@ -703,7 +763,12 @@ export default function CalendarPage() {
         </div>
         <button
           type="button"
-          onClick={() => setDate(new Date())}
+          onClick={() => {
+            setDate(new Date());
+            setTimeout(() => {
+              document.getElementById('today-cell')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+          }}
           className="px-3 py-1.5 rounded-[8px] border border-white/[0.08] bg-[#121826] text-[13px] font-medium text-[#94A3B8] hover:text-[#F1F5F9] hover:border-white/[0.14] transition-colors"
         >
           Today
@@ -736,6 +801,7 @@ export default function CalendarPage() {
                   return (
                     <div
                       key={index}
+                      id={isToday ? "today-cell" : undefined}
                       className={cn(
                         "min-h-[110px] p-2.5 transition-colors duration-150 bg-[#121826]",
                         day ? "hover:bg-[#0F1523] cursor-default" : "",
@@ -783,13 +849,76 @@ export default function CalendarPage() {
         )}
       </motion.div>
 
+      {view === "week" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="grid grid-cols-7 gap-4 min-w-[900px] overflow-x-auto pb-4"
+        >
+          {Array.from({ length: 7 }).map((_, i) => {
+            const currentDay = new Date(date);
+            currentDay.setDate(date.getDate() - date.getDay() + i);
+            const isToday = currentDay.getDate() === new Date().getDate() &&
+                            currentDay.getMonth() === new Date().getMonth() &&
+                            currentDay.getFullYear() === new Date().getFullYear();
+
+            return (
+              <div key={i} className="flex flex-col min-h-[400px] rounded-[14px] bg-[#121826] border border-white/[0.06] overflow-hidden">
+                <div className={cn(
+                  "p-3 text-center border-b border-white/[0.06]",
+                  isToday ? "bg-[#3B82F6]/10" : ""
+                )}>
+                  <div className="text-[11px] font-semibold text-[#64748B] uppercase tracking-widest mb-1">
+                    {currentDay.toLocaleDateString("en-US", { weekday: "short" })}
+                  </div>
+                  <div className={cn(
+                    "text-[15px] font-medium w-7 h-7 mx-auto flex items-center justify-center rounded-full",
+                    isToday ? "bg-[#3B82F6] text-white" : "text-[#F1F5F9]"
+                  )} id={isToday ? "today-cell" : undefined}>
+                    {currentDay.getDate()}
+                  </div>
+                </div>
+                
+                <div className="flex-1 p-2 space-y-2 overflow-y-auto no-scrollbar">
+                  {getEventsForDate(currentDay).map(event => (
+                    <div
+                      key={event.id}
+                      className={cn(
+                        "rounded-[8px] p-2 text-left cursor-pointer border hover:border-white/[0.15] transition-all",
+                        event.type === 'meeting'
+                          ? "bg-[#8B5CF6]/[0.10] border-[#8B5CF6]/20"
+                          : "bg-[#3B82F6]/[0.10] border-[#3B82F6]/20"
+                      )}
+                      onClick={() => handleEventClick(event)}
+                    >
+                      <div className={cn(
+                        "text-[10px] font-semibold mb-1",
+                        event.type === 'meeting' ? "text-[#C4B5FD]" : "text-[#93C5FD]"
+                      )}>
+                        {formatTime(event.startTime)}
+                      </div>
+                      <div className="text-[12px] font-medium text-[#F1F5F9] line-clamp-2 leading-tight">
+                        {event.title}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </motion.div>
+      )}
+
       {view === "day" && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="grid gap-4"
         >
-          <div className="p-5 rounded-[14px] bg-[#121826] border border-white/[0.06]">
+          <div 
+            id={date.getDate() === new Date().getDate() && date.getMonth() === new Date().getMonth() && date.getFullYear() === new Date().getFullYear() ? "today-cell" : undefined}
+            className="p-5 rounded-[14px] bg-[#121826] border border-white/[0.06]"
+          >
             <h3 className="mb-4 text-[17px] font-semibold text-[#F1F5F9] flex items-center gap-2">
               {date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
             </h3>
@@ -866,7 +995,12 @@ export default function CalendarPage() {
       )}
 
       {/* Create Event/Meeting Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+      <Dialog open={createDialogOpen} onOpenChange={(open) => {
+        setCreateDialogOpen(open);
+        if (!open) {
+          resetForm();
+        }
+      }}>
         <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[90vh] overflow-y-auto rounded-3xl">
           <DialogHeader>
             <DialogTitle>Create New {eventType === "meeting" ? "Meeting" : "Event"}</DialogTitle>
@@ -892,14 +1026,16 @@ export default function CalendarPage() {
               </Select>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="title">{eventType === "meeting" ? "Meeting Name" : "Event Title"}</Label>
+            <div className="grid gap-2" id="title-field">
+              <Label htmlFor="title">{eventType === "meeting" ? "Meeting Name" : "Event Title"} <span className="text-red-400">*</span></Label>
               <Input
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={eventType === "meeting" ? "Weekly Team Sync" : "Company Event"}
+                className={titleError ? "border-red-500/60 focus-visible:ring-red-500/30" : ""}
               />
+              {titleError && <p className="text-[11px] text-red-500 font-medium">This field is required.</p>}
             </div>
 
             <div className="grid gap-2">
@@ -914,15 +1050,16 @@ export default function CalendarPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Date</Label>
+              <div className="grid gap-2" id="date-field">
+                <Label>Date <span className="text-red-400">*</span></Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !selectedDate && "text-muted-foreground"
+                        !selectedDate && "text-muted-foreground",
+                        dateError || pastDatetimeError ? "border-red-500/60 focus-visible:ring-red-500/30" : ""
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -938,28 +1075,34 @@ export default function CalendarPage() {
                     />
                   </PopoverContent>
                 </Popover>
+                {dateError && <p className="text-[11px] text-red-500 font-medium">Date is required.</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2" id="time-fields">
                 <div className="grid gap-2">
-                  <Label htmlFor="start-time">Start Time</Label>
+                  <Label htmlFor="start-time">Start Time <span className="text-red-400">*</span></Label>
                   <Input
                     id="start-time"
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
+                    className={startTimeError || pastDatetimeError ? "border-red-500/60 focus-visible:ring-red-500/30 color-scheme-dark" : "color-scheme-dark"}
                   />
+                  {startTimeError && <p className="text-[11px] text-red-500 font-medium">Start time is required.</p>}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="end-time">End Time</Label>
+                  <Label htmlFor="end-time">End Time <span className="text-red-400">*</span></Label>
                   <Input
                     id="end-time"
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
+                    className={endTimeError ? "border-red-500/60 focus-visible:ring-red-500/30 color-scheme-dark" : "color-scheme-dark"}
                   />
+                  {endTimeError && <p className="text-[11px] text-red-500 font-medium">End time is required.</p>}
                 </div>
               </div>
+              {pastDatetimeError && <p className="text-[11px] text-red-500 font-medium col-span-full">Cannot schedule events in the past.</p>}
             </div>
 
             <div className="grid gap-2">

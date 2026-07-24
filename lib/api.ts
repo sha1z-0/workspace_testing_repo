@@ -127,7 +127,7 @@ export const usersAPI = {
 
       if (filters) {
         if (filters.role && filters.role !== "all") {
-          query = query.eq("role", filters.role)
+          query = query.eq("role", filters.role as any)
         }
 
         if (filters.department && filters.department !== "all") {
@@ -175,10 +175,7 @@ export const usersAPI = {
       if (error) throw error
       if (!data) throw new Error("User not found")
 
-      return {
-        id: data.id,
-        ...data,
-      }
+      return data
     } catch (error) {
       console.error("Error getting user:", error)
       throw error
@@ -269,7 +266,7 @@ export const projectsAPI = {
 
       if (filters) {
         if (filters.status) {
-          query = query.eq("status", filters.status)
+          query = query.eq("status", filters.status as any)
         }
         if (filters.leadId) {
           query = query.eq("lead_id", filters.leadId)
@@ -429,7 +426,7 @@ export const projectsAPI = {
         .insert({
           name: data.name,
           description: data.description,
-          status: data.status,
+          status: (data.status === "todo" ? "not_started" : data.status) as any,
           progress: data.progress,
           start_date: data.start_date,
           end_date: data.end_date,
@@ -514,7 +511,7 @@ export const tasksAPI = {
 
       if (filters) {
         if (filters.status && filters.status !== "all") {
-          query = query.eq("status", filters.status)
+          query = query.eq("status", filters.status as any)
         }
 
         if (filters.assigneeId) {
@@ -683,7 +680,7 @@ export const tasksAPI = {
     assigned_by_name?: string
     isPhased?: boolean
     is_phased?: boolean
-    milestones?: { title: string; description?: string; dueDate?: string; weight?: number }[]
+    milestones?: { title: string; description?: string; dueDate?: string; dueTime?: string; weight?: number }[]
   }) => {
     try {
       console.log("createTask API called with data:", data);
@@ -786,8 +783,8 @@ export const tasksAPI = {
             description: m.description || '',
             order_index: i,
             weight: m.weight ?? (evenWeight + (i === 0 ? remainder : 0)),
-            due_datetime: milestoneDueDatetime,
-            status: 'not_started'
+            due_date: milestoneDueDatetime,
+            status: 'not_started' as any
           }
         })
         const { error: milestonesError } = await supabase.from("task_milestones").insert(milestoneInserts)
@@ -825,6 +822,9 @@ export const tasksAPI = {
     submissionFileSize: number
     assignedBy: string
     assignedByName: string
+    reviewNotes: string | null
+    reviewAssignerNotes: string | null
+    reviewProgress: number | null
   }>) => {
     try {
       const updateData: any = {}
@@ -1020,17 +1020,24 @@ export const tasksAPI = {
 
   startTask: async (id: string) => {
     try {
-      // Check if this is a milestone-based task — if so, skip the flat 15% progress jump
-      const { data: task } = await supabase.from("tasks").select("is_phased").eq("id", id).single()
+      // Check if this is a milestone-based task and its current status
+      const { data: task } = await supabase.from("tasks").select("status, is_phased").eq("id", id).single()
       const isPhased = task?.is_phased || false
+      
       const updatePayload: any = {
         status: "in_progress",
-        start_date: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
-      if (!isPhased) {
-        updatePayload.progress = 0
+
+      // Only reset progress and start_date if the task is newly started (todo)
+      // If it's already in_progress (e.g. starting a 2nd milestone), preserve existing progress
+      if (task?.status === "todo") {
+        updatePayload.start_date = new Date().toISOString()
+        if (!isPhased) {
+          updatePayload.progress = 0
+        }
       }
+
       const { data, error } = await supabase
         .from("tasks")
         .update(updatePayload)
@@ -1241,7 +1248,7 @@ export const tasksAPI = {
     if (milestone.submission_open === false) {
       throw new Error("The submission deadline for this milestone has been closed by the assigner.")
     }
-    if (milestone.status !== "in_progress" && milestone.status !== "needs_revision") {
+    if (milestone.status !== "in_progress") {
       throw new Error("This milestone cannot be submitted in its current state.")
     }
     const { data: allMilestones } = await supabase.from("task_milestones").select("order_index, status").eq("task_id", milestone.task_id).order("order_index")
@@ -1268,6 +1275,10 @@ export const tasksAPI = {
       .select()
       .single()
     if (error) throw error
+    
+    // Update parent task to pending_review
+    await supabase.from("tasks").update({ status: "pending_review", updated_at: new Date().toISOString() }).eq("id", milestone.task_id)
+      
     return data
   },
 
@@ -1296,6 +1307,8 @@ export const tasksAPI = {
     if (error) throw error
     // Recalculate task progress
     await (tasksAPI as any).recalculateMilestoneProgress(data.task_id)
+    // Revert parent task to in_progress
+    await supabase.from("tasks").update({ status: "in_progress", updated_at: new Date().toISOString() }).eq("id", data.task_id)
     return data
   },
 
@@ -1314,13 +1327,18 @@ export const tasksAPI = {
     }
     const { error: reviewError } = await supabase.from("milestone_reviews").insert(insertData)
     if (reviewError) throw reviewError
+    const updatePayload: any = { status: "in_progress", updated_at: new Date().toISOString() }
     const { data, error } = await supabase
       .from("task_milestones")
-      .update({ status: "needs_revision", updated_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq("id", milestoneId)
       .select()
       .single()
     if (error) throw error
+    
+    // Revert parent task to in_progress
+    await supabase.from("tasks").update({ status: "in_progress", updated_at: new Date().toISOString() }).eq("id", data.task_id)
+    
     return data
   },
 
@@ -1364,7 +1382,7 @@ export const tasksAPI = {
       task_id: taskId,
       title: milestone.title,
       description: milestone.description || '',
-      due_datetime: milestoneDueDatetime,
+      due_date: milestoneDueDatetime,
       order_index: newIndex,
       weight: milestone.weight || 0,
       status: 'not_started'
@@ -1902,6 +1920,7 @@ export const calendarEventsAPI = {
           location: event.location,
           event_type: event.type,
           organizer_id: event.organizerId,
+          created_by: event.organizerId,
           organizer_name: event.organizerName || null,
           organizer_email: event.organizerEmail || null,
           attendees: event.attendees || [],
@@ -2190,7 +2209,7 @@ export const warningsAPI = {
 
       if (filters) {
         if (filters.status && filters.status !== "all") {
-          query = query.eq("status", filters.status)
+          query = query.eq("status", filters.status as any)
         }
 
         if (filters.userId) {
@@ -2536,8 +2555,8 @@ export const timeTrackingAPI = {
           if (!analyticsData[dateKey].users[session.user_id]) {
             analyticsData[dateKey].users[session.user_id] = {
               userId: session.user_id,
-              userName: session.user_name,
-              userRole: session.user_role,
+              // userName: (session as any).user_name || 'Unknown User',
+              // userRole: (session as any).user_role || 'Unknown Role',
               minutes: 0,
               sessions: 0
             }
@@ -2927,7 +2946,7 @@ export const teamsAPI = {
       return (users || []).filter(user => 
         !currentMembers.includes(user.uid) && 
         user.uid !== teamLeaderId &&
-        user.role !== 'ADMIN'
+        user.role !== 'CEO'
       )
     } catch (error) {
       console.error("Error getting available users:", error)
