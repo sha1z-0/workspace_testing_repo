@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -70,7 +71,10 @@ export function CreateAnnouncement({ onSuccess }: CreateAnnouncementProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>Create Announcement</Button>
+        <Button size="lg" className="shadow-lg bg-white text-slate-900 hover:bg-slate-100 border-none">
+          <Plus className="mr-2 h-5 w-5" />
+          Create Announcement
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

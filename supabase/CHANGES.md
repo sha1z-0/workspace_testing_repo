@@ -1,5 +1,51 @@
 # Changes Log — Finova Workspace
 
+## [2026-07-25] UI/UX — Comprehensive Light Mode & Design Standardization Pass
+### Status: Completed
+### Root Cause
+1. Pages contained hardcoded dark backgrounds (`#0B0F1A`) and fixed dark gradient headers (`PageHeader`), creating visual bugs and dark boxes when switching to Light Mode.
+2. Shared components (`TaskButton`, `AnimatedTabs`) used hardcoded dark mode colors (`text-[#CBD5E1]`, `border-white/10`), causing low contrast and unreadable text in Light Mode.
+3. Card containers across workspace panels lacked baseline elevation/shadows and relied on `border-white/10` or `border-white/20`, rendering cards flat and borderless in Light Mode.
+4. Header action buttons (*Assign Task*, *Create Announcement*, *New Project*, *New Team*) used inconsistent text colors (e.g. `text-indigo-600`, `text-primary`) and sizing across role panels.
+5. The Calendar view switcher container used a fixed width (`w-[280px]`), leaving dead whitespace to the right of the Month tab.
+
+### Actual Changes Made
+- **Page Header & Root Styling**: Updated `PageHeader` (`components/ui/page-header.tsx`) to render a theme-aware gradient (`from-blue-50 to-indigo-100` in light mode, dark gradient in dark mode). Removed hardcoded `#0B0F1A` style from `app/(workspace)/tasks/page.tsx`.
+- **Sidebar Active Nav**: Updated `components/admin-layout.tsx` to render a light-mode active item pill (`bg-blue-50/80 border border-blue-200 text-blue-600`) with a left accent bar (`bg-blue-600 rounded-r-full`).
+- **Global & Local Card Elevation**: Updated `components/ui/card.tsx` to apply `shadow-[0_8px_30px_rgba(100,116,139,0.15)] dark:shadow-none` and `border-slate-200/70 dark:border-white/10`. Added explicit shadow overrides to card components in `app/(workspace)/files/page.tsx`, `app/(workspace)/tasks/page.tsx`, `app/(workspace)/tasks/kanban/task-card.tsx`, and `app/(workspace)/calendar/page.tsx`.
+- **Workspace-wide Border Normalization**: Ran automated script `scratch/fix_borders.js` to update 14 workspace pages, replacing hardcoded `border-white/10` and `border-white/20` with responsive `border-slate-200/70 dark:border-white/...` borders.
+- **Button & Header Standardization**: Updated primary header action buttons across Tasks, Vault, Announcements, Projects, and Team pages to use size `lg`, white background, and crisp dark text (`text-slate-900`) in both Light and Dark modes. Styled C-Level Dashboard date pill to match.
+- **Calendar Tabs Fix**: Replaced `w-[280px]` wrapper around `AnimatedTabs` in `app/(workspace)/calendar/page.tsx` with `w-fit`.
+
+### Files Touched
+- `components/ui/page-header.tsx`
+- `components/admin-layout.tsx`
+- `components/ui/card.tsx`
+- `components/tasks/task-button.tsx`
+- `components/ui/animated-tabs.tsx`
+- `components/create-announcement.tsx`
+- `app/(workspace)/tasks/page.tsx`
+- `app/(workspace)/tasks/kanban/task-card.tsx`
+- `app/(workspace)/calendar/page.tsx`
+- `app/(workspace)/files/page.tsx`
+- `app/(workspace)/vault/page.tsx`
+- `app/(workspace)/team/page.tsx`
+- `app/(workspace)/projects/page.tsx`
+- `app/(workspace)/dashboard/page.tsx`
+- `app/(workspace)/admin/c-level/page.tsx`
+- `app/(workspace)/admin/c-level/projects/page.tsx`
+- `app/(workspace)/admin/c-level/team/page.tsx`
+- `app/(workspace)/admin/c-level/announcements/page.tsx`
+- `app/(workspace)/admin/ceo/projects/page.tsx`
+- `app/(workspace)/admin/ceo/team/page.tsx`
+- `app/(workspace)/admin/ceo/departments/page.tsx`
+- `app/(workspace)/admin/ceo/page.tsx`
+- `app/(workspace)/admin/lead/projects/page.tsx`
+- `app/(workspace)/admin/lead/page.tsx`
+- `app/(workspace)/chat/page.tsx`
+- `app/(workspace)/settings/page.tsx`
+- `supabase/CHANGES.md`
+
 ## [2026-07-22] Calendar — Event Date/Time Validation Enforcement
 ### Status: Completed
 ### Root Cause

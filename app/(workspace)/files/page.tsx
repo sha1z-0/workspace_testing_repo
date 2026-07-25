@@ -25,10 +25,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
 import { Progress } from "@/components/ui/progress"
+import { PageHeader } from "@/components/ui/page-header"
+import { AnimatedTabs } from "@/components/ui/animated-tabs"
 
 export default function FilesPage() {
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [uploadLoading, setUploadLoading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -157,13 +160,13 @@ export default function FilesPage() {
             try {
               // TODO: Implement file upload with Supabase Storage
               console.log("File upload requires Supabase Storage setup");
-              
+
               toast({
                 title: "File upload not implemented",
                 description: "Supabase Storage needs to be configured. See FRONTEND_ANALYSIS.md",
                 variant: "destructive"
               });
-              
+
               // Placeholder for when implemented:
               // 1. Upload file to Supabase Storage bucket
               // 2. Get public URL
@@ -310,30 +313,15 @@ export default function FilesPage() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="space-y-8"
-    >
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/90 to-blue-600 p-8 text-white shadow-xl ring-1 ring-white/10 dark:from-blue-900 dark:to-slate-900"
-      >
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-cyan-400/20 blur-2xl" />
-
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl mb-2">Files</h1>
-            <p className="text-indigo-100 max-w-xl text-lg">
-              Manage and share your team's documents and assets.
-            </p>
-          </div>
+    <div className="space-y-8">
+      <PageHeader
+        title="Files"
+        description="Manage and share your team's documents and assets."
+        icon={FileArchive}
+        action={
           <Dialog open={isUploadDialogOpen} onOpenChange={handleDialogClose}>
             <DialogTrigger asChild>
-              <Button size="lg" className="shadow-lg bg-white text-indigo-600 hover:bg-indigo-50 border-none">
+              <Button size="lg" className="bg-white text-slate-900 hover:bg-slate-100 border-none shadow-lg">
                 <Upload className="mr-2 h-5 w-5" />
                 Upload File
               </Button>
@@ -397,31 +385,30 @@ export default function FilesPage() {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
-      </motion.div>
+        }
+      />
 
       <div className="relative">
         <Search className="absolute left-3 top-3 h-5 w-5 text-indigo-500 z-10" />
         <Input
           placeholder="Search files..."
-          className="pl-10 h-11 bg-white/40 dark:bg-slate-900/40 border-white/20 backdrop-blur-xl shadow-lg focus-visible:ring-indigo-500 rounded-xl transition-all hover:bg-white/50"
+          className="pl-10 h-11 bg-white/40 dark:bg-slate-900/40 border-slate-200/70 dark:border-white/20 backdrop-blur-xl shadow-lg focus-visible:ring-indigo-500 rounded-xl transition-all hover:bg-white/50"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
 
-      <Tabs defaultValue="all" className="space-y-6">
-        <TabsList className="bg-white/30 dark:bg-slate-900/30 p-1.5 rounded-2xl backdrop-blur-xl border border-white/10 w-full md:w-auto inline-flex h-auto gap-2">
-          {["all", "recent", "shared"].map((tab) => (
-            <TabsTrigger
-              key={tab}
-              value={tab}
-              className="px-6 py-2.5 rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 font-medium capitalize"
-            >
-              {tab === "all" ? "All Files" : tab === "shared" ? "Shared With Me" : "Recent"}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <AnimatedTabs
+          tabs={[
+            { value: "all", label: "All Files" },
+            { value: "recent", label: "Recent" },
+            { value: "shared", label: "Shared With Me" }
+          ]}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          layoutId="filesTab"
+        />
         <TabsContent value="all" className="mt-0">
           {filteredFiles.length === 0 ? (
             <motion.div
@@ -461,7 +448,7 @@ export default function FilesPage() {
                     exit={{ opacity: 0, scale: 0.9 }}
                     className="group"
                   >
-                    <Card className="overflow-hidden border-white/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 rounded-2xl group-hover:-translate-y-1">
+                    <Card className="overflow-hidden border border-slate-200 dark:border-slate-200/70 dark:border-white/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md shadow-[0_8px_30px_rgba(100,116,139,0.15)] dark:shadow-none hover:border-slate-500/50 transition-all duration-300 rounded-2xl group-hover:-translate-y-1">
                       <CardContent className="p-0">
                         <div className="p-5 flex items-start justify-between">
                           <div className="p-3 rounded-2xl bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 shadow-inner">
@@ -473,7 +460,7 @@ export default function FilesPage() {
                                 <MoreHorizontal className="h-4 w-4 text-slate-500" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="rounded-xl border-white/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
+                            <DropdownMenuContent align="end" className="rounded-xl border-slate-200/70 dark:border-white/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
                               <DropdownMenuItem onClick={() => handleFileDownload(file)} className="focus:bg-indigo-50 dark:focus:bg-indigo-900/20 rounded-lg cursor-pointer">
                                 <Download className="mr-2 h-4 w-4 text-indigo-500" />
                                 <span>Download</span>
@@ -519,6 +506,6 @@ export default function FilesPage() {
           </div>
         </TabsContent>
       </Tabs>
-    </motion.div>
+    </div>
   )
 }

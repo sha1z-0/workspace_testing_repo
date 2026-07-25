@@ -87,7 +87,7 @@ export default function TaskCard({
   }
 
   return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow">
+    <Card className="shadow-[0_8px_30px_rgba(100,116,139,0.15)] dark:shadow-none hover:shadow-[0_12px_40px_rgba(100,116,139,0.25)] dark:hover:shadow-none transition-shadow">
       <CardContent className="p-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2 mb-2">

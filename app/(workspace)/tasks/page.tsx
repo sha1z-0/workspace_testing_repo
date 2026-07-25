@@ -10,12 +10,14 @@ import { tasksAPI, usersAPI } from "@/lib/api"
 import type { FirebaseTask } from "@/lib/firebase-types"
 import { useEffect, useState } from "react"
 import {
-  Loader2, Plus, Search, Filter, CheckCircle,
+  Loader2, Plus, Search, Filter, CheckCircle, CheckSquare,
   UserCircle2, LayoutGrid, Calendar as CalendarIcon, X, FileText, Eye,
   Send, Play, MessageSquare, Download, Paperclip, Lock, ListChecks, Unlock,
   ChevronDown, ArrowUpDown
 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { PageHeader } from "@/components/ui/page-header"
+import { AnimatedTabs } from "@/components/ui/animated-tabs"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -198,7 +200,14 @@ export default function TasksPage() {
     try {
       setIsMilestoneSubmitting(true)
       await tasksAPI.approveMilestone(milestoneDialogId, milestoneComment, user!.id, milestoneFile || undefined, user?.id)
-      if (detailTask) { const m = await tasksAPI.getTaskMilestones(detailTask.id); setMilestones(m); await fetchTasks() }
+      if (detailTask) { 
+        const m = await tasksAPI.getTaskMilestones(detailTask.id); 
+        setMilestones(m); 
+        await fetchTasks();
+        // Update the detailTask to reflect status changes (e.g., if it moved to completed)
+        const updated = await tasksAPI.getTaskById(detailTask.id);
+        if (updated) setDetailTask(updated);
+      }
       setMilestoneDialogOpen(false); setMilestoneComment(""); setMilestoneFile(null)
       toast({ title: "Milestone approved" })
     } catch (error: any) { toast({ title: "Error", description: error?.message, variant: "destructive" }) }
@@ -736,45 +745,45 @@ export default function TasksPage() {
   const nowTimeStr = new Date().toTimeString().slice(0, 5)
 
   return (
-    <div className="min-h-screen p-1 space-y-6" style={{ background: "#0B0F1A" }}>
+    <div className="min-h-screen p-1 space-y-6">
       {/* Hero Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pt-2">
-        <div>
-          <h1 className="text-[28px] font-semibold text-[#F1F5F9] tracking-tight">Taskboard</h1>
-          <p className="text-[#64748B] text-[15px] mt-0.5">
-            {isManager ? "Assign, track, and manage team productivity." : "Manage your tasks and track progress."}
-          </p>
-        </div>
-        <Dialog
-          open={isTaskDialogOpen}
-          onOpenChange={(open) => {
-            setIsTaskDialogOpen(open)
-            if (!open) {
-              setDescriptionError(false)
-              setAssigneeError(false)
-              setDueDateError(false)
-              setDueTimeError(false)
-              setPastDatetimeError(false)
-              setNewTask({
-                title: "",
-                description: "",
-                priority: "medium",
-                status: "todo",
-                progress: 0,
-                assigneeIds: [],
-                viewerIds: [],
-                dueDate: "",
-                dueTime: "",
-                useMilestones: false,
-                milestones: [],
-              })
-            }
-          }}
-        >
-          <DialogTrigger asChild>
-            <TaskButton><Plus className="h-4 w-4" />{isManager ? "Assign Task" : "Create Task"}</TaskButton>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[560px] max-h-[90vh] bg-[#121826] border-white/[0.06] text-[#F1F5F9] rounded-[14px] flex flex-col overflow-hidden p-6">
+      <PageHeader
+        title="Taskboard"
+        description={isManager ? "Assign, track, and manage team productivity." : "Manage your tasks and track progress."}
+        icon={CheckSquare}
+        action={
+          <Dialog
+            open={isTaskDialogOpen}
+            onOpenChange={(open) => {
+              setIsTaskDialogOpen(open)
+              if (!open) {
+                setDescriptionError(false)
+                setAssigneeError(false)
+                setDueDateError(false)
+                setDueTimeError(false)
+                setPastDatetimeError(false)
+                setNewTask({
+                  title: "",
+                  description: "",
+                  priority: "medium",
+                  status: "todo",
+                  progress: 0,
+                  assigneeIds: [],
+                  viewerIds: [],
+                  dueDate: "",
+                  dueTime: "",
+                  useMilestones: false,
+                  milestones: [],
+                })
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button size="lg" className="shadow-lg bg-white text-slate-900 hover:bg-slate-100 border-none">
+                <Plus className="mr-2 h-5 w-5" />{isManager ? "Assign Task" : "Create Task"}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[560px] max-h-[90vh] bg-[#121826] border-white/[0.06] text-[#F1F5F9] rounded-[14px] flex flex-col overflow-hidden p-6">
             <div className="flex-shrink-0 pb-2">
               <DialogHeader>
                 <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">{isManager ? "Assign New Task" : "Create New Task"}</DialogTitle>
@@ -915,14 +924,15 @@ export default function TasksPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
+        }
+      />
 
       {/* Controls Bar */}
       <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
         <div className="flex items-center gap-2 w-full md:w-auto flex-1">
           <div className="relative flex-1 md:max-w-[320px]">
-            <Input placeholder="Search tasks..." className="pl-9 bg-[#121826] border-white/[0.06] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px] h-10 text-[14px]" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748B] pointer-events-none" />
+            <Input placeholder="Search tasks..." className="pl-9 bg-white dark:bg-[#121826] border-slate-200 dark:border-white/[0.06] text-slate-900 dark:text-[#F1F5F9] placeholder:text-slate-500 dark:placeholder:text-[#475569] rounded-[10px] h-10 text-[14px]" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-[#64748B] pointer-events-none" />
           </div>
           <button
             type="button"
@@ -931,20 +941,20 @@ export default function TasksPage() {
               else if (sortBy === "priority") setSortBy("deadline")
               else setSortBy("date")
             }}
-            className="inline-flex items-center gap-1.5 rounded-[10px] border border-white/[0.08] bg-[#121826] px-3 py-2 text-[13px] font-medium text-[#CBD5E1] hover:bg-white/[0.04] transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 rounded-[10px] border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#121826] px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-[#CBD5E1] hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-colors whitespace-nowrap"
           >
-            <ArrowUpDown className="h-3.5 w-3.5 text-[#64748B]" />
-            Sort by: <span className="text-[#F1F5F9]">
+            <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 dark:text-[#64748B]" />
+            Sort by: <span className="text-slate-900 dark:text-[#F1F5F9]">
               {sortBy === "date" ? "Date assigned" : sortBy === "priority" ? "Priority" : "Nearest Deadline"}
             </span>
-            <ChevronDown className="h-3 w-3 text-[#64748B]" />
+            <ChevronDown className="h-3 w-3 text-slate-400 dark:text-[#64748B]" />
           </button>
         </div>
         <div className="flex items-center gap-2 w-full md:w-auto">
-          <Button variant="outline" size="sm" asChild className="bg-[#121826] border-white/[0.08] text-[#CBD5E1] hover:bg-white/[0.06] rounded-[10px]"><a href="/tasks/kanban"><LayoutGrid className="mr-2 h-4 w-4" /> Kanban</a></Button>
+          <Button variant="outline" size="sm" asChild className="bg-white dark:bg-[#121826] border-slate-200 dark:border-white/[0.08] text-slate-600 dark:text-[#CBD5E1] hover:bg-slate-50 dark:hover:bg-white/[0.06] rounded-[10px]"><a href="/tasks/kanban"><LayoutGrid className="mr-2 h-4 w-4" /> Kanban</a></Button>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px] bg-[#121826] border-white/[0.08] text-[#F1F5F9] rounded-[10px] h-10 text-[14px]"><Filter className="mr-2 h-3.5 w-3.5 text-[#64748B]" /><SelectValue placeholder="All Status" /></SelectTrigger>
-            <SelectContent className="bg-[#121826] border-white/[0.08]">
+            <SelectTrigger className="w-[160px] bg-white dark:bg-[#121826] border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-[#F1F5F9] rounded-[10px] h-10 text-[14px]"><Filter className="mr-2 h-3.5 w-3.5 text-slate-400 dark:text-[#64748B]" /><SelectValue placeholder="All Status" /></SelectTrigger>
+            <SelectContent className="bg-white dark:bg-[#121826] border-slate-200 dark:border-white/[0.08]">
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="todo">To Do</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
@@ -957,23 +967,13 @@ export default function TasksPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-1 p-1 rounded-[12px] bg-[#121826] border border-white/[0.06] w-fit">
-        {Object.entries(TAB_LABELS).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setActiveTab(key)}
-            className={`px-3.5 py-1.5 rounded-[10px] text-[13px] font-medium transition-colors ${
-              activeTab === key
-                ? key === "archived"
-                  ? "bg-amber-500/10 text-amber-400"
-                  : "bg-white/10 text-[#F1F5F9]"
-                : "text-[#64748B] hover:text-[#CBD5E1]"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="flex gap-1 w-fit">
+        <AnimatedTabs
+          tabs={Object.entries(TAB_LABELS).map(([key, label]) => ({ value: key, label }))}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          layoutId="tasksTab"
+        />
       </div>
 
       {/* Task Grid */}
@@ -981,10 +981,10 @@ export default function TasksPage() {
         {initialLoad ? <TaskSkeleton /> : (
           <motion.div key={activeTab} variants={containerVariants} initial="hidden" animate="visible" exit="exit" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {getTasksByStatus(activeTab).length === 0 ? (
-              <div className="col-span-full flex h-52 flex-col items-center justify-center rounded-[14px] border border-dashed border-white/[0.06] bg-[#121826]/50">
-                <CheckCircle className="h-8 w-8 text-[#475569] mb-3" />
-                <h3 className="text-[15px] font-medium text-[#64748B]">No tasks found</h3>
-                <p className="text-[13px] text-[#475569] mt-1">{searchQuery ? "Try adjusting your search" : "Create a new task to get started"}</p>
+              <div className="col-span-full flex h-52 flex-col items-center justify-center rounded-[14px] border border-dashed border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-[#121826]/50">
+                <CheckCircle className="h-8 w-8 text-slate-400 dark:text-[#475569] mb-3" />
+                <h3 className="text-[15px] font-medium text-slate-600 dark:text-[#64748B]">No tasks found</h3>
+                <p className="text-[13px] text-slate-500 dark:text-[#475569] mt-1">{searchQuery ? "Try adjusting your search" : "Create a new task to get started"}</p>
               </div>
             ) : getTasksByStatus(activeTab).map((task) => {
               const canSubmit = isAssignee(task) && task.status === "in_progress"
@@ -993,38 +993,38 @@ export default function TasksPage() {
               const allMilestonesDone = isPhased && summary && summary.approved === summary.total && summary.total > 0
 
               return (
-                <motion.div key={task.id} layout whileHover={{ y: -2 }} className="group">
-                  <div className={`flex flex-col h-full rounded-[14px] border border-white/[0.06] bg-[#121826] p-4 transition-colors hover:border-white/[0.10] ${task.status === "completed" ? "opacity-70" : ""}`}>
+                <motion.div key={task.id} layout whileHover={{ y: -2 }} className="group h-full">
+                  <div className={`flex flex-col h-full rounded-[14px] border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-[#121826] p-4 transition-all shadow-[0_8px_30px_rgba(100,116,139,0.15)] dark:shadow-none hover:shadow-lg dark:hover:border-white/[0.10] ${task.status === "completed" ? "opacity-70" : ""}`}>
                     {/* Top row: status + priority + due date */}
                     <div className="flex items-center gap-2 mb-2.5 min-w-0">
                       <StatusPill status={task.status} className="flex-shrink-0" />
                       <PriorityPill priority={task.priority} className="flex-shrink-0" />
                       {(task.dueDate || task.dueDatetime) && (
-                        <span className="ml-auto text-[11px] text-[#475569] flex items-center gap-1 flex-shrink-0 whitespace-nowrap"><CalendarIcon className="h-3 w-3 flex-shrink-0" />{getDueDisplay(task)}</span>
+                        <span className="ml-auto text-[11px] text-slate-500 dark:text-[#475569] flex items-center gap-1 flex-shrink-0 whitespace-nowrap"><CalendarIcon className="h-3 w-3 flex-shrink-0" />{getDueDisplay(task)}</span>
                       )}
                     </div>
 
                     {/* Title + description */}
-                    <h3 className="text-[15px] font-medium text-[#F1F5F9] leading-snug truncate mb-1">{task.title}</h3>
-                    <p className="text-[13px] text-[#64748B] line-clamp-2 mb-3">{task.description}</p>
+                    <h3 className="text-[15px] font-medium text-slate-900 dark:text-[#F1F5F9] leading-snug truncate mb-1">{task.title}</h3>
+                    <p className="text-[13px] text-slate-500 dark:text-[#64748B] line-clamp-2 mb-3">{task.description}</p>
 
                     {/* Assignee row + milestone chip */}
                     <div className="flex items-center gap-2 mb-3 text-[12px] min-w-0">
-                      <div className="flex items-center gap-1.5 text-[#94A3B8] min-w-0 overflow-hidden">
+                      <div className="flex items-center gap-1.5 text-slate-500 dark:text-[#94A3B8] min-w-0 overflow-hidden">
                         <UserCircle2 className="h-3.5 w-3.5 flex-shrink-0" />
                         <span className="truncate whitespace-nowrap">{getAssigneeName(task)}</span>
                         {task.assignedByName && task.assignedByName !== getAssigneeName(task) && (
-                          <span className="text-[#475569] truncate whitespace-nowrap">· by {task.assignedByName}</span>
+                          <span className="text-slate-400 dark:text-[#475569] truncate whitespace-nowrap">· by {task.assignedByName}</span>
                         )}
                       </div>
                       {!isManager && task.createdAt && (
-                        <span className="text-[11px] text-[#475569] flex items-center gap-1 flex-shrink-0">
+                        <span className="text-[11px] text-slate-400 dark:text-[#475569] flex items-center gap-1 flex-shrink-0">
                           <CalendarIcon className="h-3 w-3" />
                           Assigned {format(new Date(task.createdAt), "MMM d")}
                         </span>
                       )}
                       {task.isPhased && (
-                        <span className="ml-auto flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] font-medium text-[#94A3B8] flex-shrink-0">
+                        <span className="ml-auto flex items-center gap-1 rounded-full bg-slate-100 dark:bg-white/[0.06] px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:text-[#94A3B8] flex-shrink-0">
                           <ListChecks className="h-3 w-3" />{summary ? `${summary.approved}/${summary.total}` : "Phased"}
                         </span>
                       )}
@@ -1124,7 +1124,7 @@ export default function TasksPage() {
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                               {/* Assigner toggle for submission_open */}
-                              {isAssgnr && (m.status === "in_progress" || m.status === "pending_review") && (
+                              {isAssgnr && (m.status === "in_progress" || m.status === "pending_review") && (m.due_datetime ? new Date(m.due_datetime).getTime() < Date.now() : false) && (
                                 <button
                                   type="button"
                                   onClick={() => handleToggleMilestoneSubmission(m.id, m.submission_open !== false)}

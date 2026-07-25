@@ -9,10 +9,12 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useEffect, useState, useRef } from "react"
-import { Loader2, Save, User, Bell, Palette, Lock, Briefcase, Boxes, Camera, Trash2, Mail, LayoutDashboard, MessageSquare, CheckSquare, Megaphone, Clock, ShieldCheck } from "lucide-react"
+import { Loader2, Save, User, Bell, Palette, Lock, Briefcase, Boxes, Camera, Trash2, Mail, LayoutDashboard, MessageSquare, CheckSquare, Megaphone, Clock, ShieldCheck, Settings as SettingsIcon } from "lucide-react"
+import { PageHeader } from "@/components/ui/page-header"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
+import { AnimatedTabs } from "@/components/ui/animated-tabs"
 import { toast } from "@/components/ui/use-toast"
 import { useTheme } from "next-themes"
 import { motion, AnimatePresence } from "framer-motion"
@@ -21,6 +23,7 @@ import { cn } from "@/lib/utils"
 export default function SettingsPage() {
     const { user, updateUserData } = useAuth()
     const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState("profile")
     const [uploadingPhoto, setUploadingPhoto] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
     const [changingPassword, setChangingPassword] = useState(false)
@@ -485,26 +488,15 @@ export default function SettingsPage() {
             transition={{ duration: 0.5 }}
             className="space-y-8"
         >
-            {/* Hero Header */}
-            <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/90 to-blue-600 p-8 text-white shadow-xl ring-1 ring-white/10 dark:from-blue-900 dark:to-slate-900"
-            >
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-white/10 blur-3xl animate-pulse" />
-                <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-cyan-400/20 blur-2xl" />
-
-                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl mb-2">Settings</h1>
-                        <p className="text-indigo-100 max-w-xl text-lg">
-                            Manage your account and preferences.
-                        </p>
-                    </div>
+            <PageHeader
+                title="Settings"
+                description="Manage your account and preferences."
+                icon={SettingsIcon}
+                action={
                     <Button
                         onClick={handleSaveSettings}
                         disabled={savingSettings}
-                        className="shadow-lg bg-white text-indigo-600 hover:bg-indigo-50 border-none transition-all hover:scale-105"
+                        className="bg-white text-slate-900 hover:bg-slate-100 border-none shadow-lg transition-all hover:scale-105"
                     >
                         {savingSettings ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -513,23 +505,17 @@ export default function SettingsPage() {
                         )}
                         Save Changes
                     </Button>
-                </div>
-            </motion.div>
+                }
+            />
 
-            <Tabs defaultValue="profile" className="w-full">
+            <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <div className="relative overflow-x-auto pb-2">
-                    <TabsList className="bg-white/40 dark:bg-slate-900/40 p-1 rounded-2xl backdrop-blur-xl border border-white/20 w-full min-w-[700px] grid grid-cols-6 gap-1 shadow-sm overflow-hidden h-auto">
-                        {tabs.map((tab) => (
-                            <TabsTrigger
-                                key={tab.id}
-                                value={tab.id}
-                                className="w-full h-full inline-flex items-center justify-center gap-2 rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-md transition-all duration-300 py-3 px-2 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400 whitespace-nowrap text-sm"
-                            >
-                                <tab.icon className="w-4 h-4 shrink-0" />
-                                <span>{tab.label}</span>
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
+                    <AnimatedTabs
+                        tabs={tabs.map(t => ({ value: t.id, label: t.label, icon: t.icon }))}
+                        activeTab={activeTab}
+                        onTabChange={setActiveTab}
+                        layoutId="settingsTab"
+                    />
                 </div>
 
                 <div className="mt-6">
@@ -540,7 +526,7 @@ export default function SettingsPage() {
                             transition={{ duration: 0.3 }}
                             className="grid gap-6 md:grid-cols-12"
                         >
-                            <Card className="md:col-span-4 border-white/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg rounded-3xl overflow-hidden">
+                            <Card className="md:col-span-4 border-slate-200/70 dark:border-white/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg rounded-3xl overflow-hidden">
                                 <CardHeader className="bg-gradient-to-br from-indigo-500/10 to-blue-500/10">
                                     <CardTitle>Profile Picture</CardTitle>
                                     <CardDescription>Your visible identity</CardDescription>
@@ -595,7 +581,7 @@ export default function SettingsPage() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="md:col-span-8 border-white/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg rounded-3xl overflow-hidden">
+                            <Card className="md:col-span-8 border-slate-200/70 dark:border-white/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg rounded-3xl overflow-hidden">
                                 <CardHeader>
                                     <CardTitle>Personal Information</CardTitle>
                                     <CardDescription>Update your personal details</CardDescription>
@@ -608,7 +594,7 @@ export default function SettingsPage() {
                                                 id="name"
                                                 value={profileData.name}
                                                 onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                                                className="bg-white/50 dark:bg-slate-800/50 border-white/20"
+                                                className="bg-white/50 dark:bg-slate-800/50 border-slate-200/70 dark:border-white/20"
                                             />
                                         </div>
                                         <div className="space-y-2">
@@ -631,7 +617,7 @@ export default function SettingsPage() {
                                                 id="department"
                                                 value={profileData.department}
                                                 onChange={(e) => setProfileData({ ...profileData, department: e.target.value })}
-                                                className="bg-white/50 dark:bg-slate-800/50 border-white/20"
+                                                className="bg-white/50 dark:bg-slate-800/50 border-slate-200/70 dark:border-white/20"
                                             />
                                         </div>
                                     </div>
@@ -646,14 +632,14 @@ export default function SettingsPage() {
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ duration: 0.3 }}
                         >
-                            <Card className="border-white/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg rounded-3xl">
+                            <Card className="border-slate-200/70 dark:border-white/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg rounded-3xl">
                                 <CardHeader>
                                     <CardTitle>Notification Preferences</CardTitle>
                                     <CardDescription>Choose how you want to be notified</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
                                     <div className="grid gap-6">
-                                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/30 dark:bg-slate-800/30 border border-white/10">
+                                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/30 dark:bg-slate-800/30 border border-slate-200/70 dark:border-white/10">
                                             <div className="flex items-center gap-4">
                                                 <div className="p-2.5 bg-blue-100 text-blue-600 rounded-lg dark:bg-blue-900/30 dark:text-blue-400">
                                                     <Mail className="w-5 h-5" />
@@ -674,7 +660,7 @@ export default function SettingsPage() {
                                             />
                                         </div>
 
-                                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/30 dark:bg-slate-800/30 border border-white/10">
+                                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/30 dark:bg-slate-800/30 border border-slate-200/70 dark:border-white/10">
                                             <div className="flex items-center gap-4">
                                                 <div className="p-2.5 bg-purple-100 text-purple-600 rounded-lg dark:bg-purple-900/30 dark:text-purple-400">
                                                     <Bell className="w-5 h-5" />
@@ -695,7 +681,7 @@ export default function SettingsPage() {
                                             />
                                         </div>
 
-                                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/30 dark:bg-slate-800/30 border border-white/10">
+                                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/30 dark:bg-slate-800/30 border border-slate-200/70 dark:border-white/10">
                                             <div className="flex items-center gap-4">
                                                 <div className="p-2.5 bg-emerald-100 text-emerald-600 rounded-lg dark:bg-emerald-900/30 dark:text-emerald-400">
                                                     <MessageSquare className="w-5 h-5" />
@@ -716,7 +702,7 @@ export default function SettingsPage() {
                                             />
                                         </div>
 
-                                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/30 dark:bg-slate-800/30 border border-white/10">
+                                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/30 dark:bg-slate-800/30 border border-slate-200/70 dark:border-white/10">
                                             <div className="flex items-center gap-4">
                                                 <div className="p-2.5 bg-amber-100 text-amber-600 rounded-lg dark:bg-amber-900/30 dark:text-amber-400">
                                                     <CheckSquare className="w-5 h-5" />
@@ -748,7 +734,7 @@ export default function SettingsPage() {
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ duration: 0.3 }}
                         >
-                            <Card className="border-white/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg rounded-3xl">
+                            <Card className="border-slate-200/70 dark:border-white/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg rounded-3xl">
                                 <CardHeader>
                                     <CardTitle>Appearance & Theme</CardTitle>
                                     <CardDescription>Customize your workspace experience</CardDescription>
@@ -822,7 +808,7 @@ export default function SettingsPage() {
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ duration: 0.3 }}
                         >
-                            <Card className="border-white/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg rounded-3xl">
+                            <Card className="border-slate-200/70 dark:border-white/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl shadow-lg rounded-3xl">
                                 <CardHeader>
                                     <CardTitle>Security Settings</CardTitle>
                                     <CardDescription>Protect your account and data</CardDescription>
@@ -911,7 +897,7 @@ export default function SettingsPage() {
                             className="grid md:grid-cols-2 gap-4"
                         >
                             {['Google Drive', 'Slack', 'GitHub', 'Zoom'].map((app) => (
-                                <Card key={app} className="border-white/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl">
+                                <Card key={app} className="border-slate-200/70 dark:border-white/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl">
                                     <CardContent className="flex items-center justify-between p-6">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center">

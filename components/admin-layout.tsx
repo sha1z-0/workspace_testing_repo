@@ -228,8 +228,8 @@ export default function AdminLayout({
                               group relative flex items-center text-[13px] font-medium
                               nav-item-transition animate-fade-in
                               ${pathname === item.url
-                                ? "bg-sidebar-accent text-foreground glow-primary"
-                                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground"
+                                ? "bg-blue-50/80 border border-blue-200 text-blue-600 dark:bg-sidebar-accent dark:text-foreground dark:border-transparent glow-primary shadow-sm"
+                                : "border border-transparent text-slate-600 dark:text-sidebar-foreground hover:bg-slate-50 dark:hover:bg-sidebar-accent hover:text-slate-900 dark:hover:text-foreground"
                               }
                               ${collapsed ? "justify-center h-10 rounded-lg w-full" : "gap-3 rounded-xl px-3 py-2.5"}
                             `}
@@ -237,7 +237,7 @@ export default function AdminLayout({
                           >
                             {/* Active indicator bar */}
                             {pathname === item.url && !collapsed && (
-                              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[60%] rounded-full active-indicator animate-indicator-grow" />
+                              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[4px] h-[60%] rounded-r-full bg-blue-600 dark:active-indicator animate-indicator-grow" />
                             )}
                             
                             {collapsed ? (
@@ -320,8 +320,8 @@ export default function AdminLayout({
                                 group relative flex items-center text-[13px] font-medium
                                 nav-item-transition animate-fade-in
                                 ${pathname === item.url
-                                  ? "bg-sidebar-accent text-foreground glow-primary"
-                                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground"
+                                  ? "bg-blue-50/80 border border-blue-200 text-blue-600 dark:bg-sidebar-accent dark:text-foreground dark:border-transparent glow-primary shadow-sm"
+                                  : "border border-transparent text-slate-600 dark:text-sidebar-foreground hover:bg-slate-50 dark:hover:bg-sidebar-accent hover:text-slate-900 dark:hover:text-foreground"
                                 }
                                 ${collapsed ? "justify-center h-10 rounded-lg w-full" : "gap-3 rounded-xl px-3 py-2.5"}
                               `}
@@ -329,7 +329,7 @@ export default function AdminLayout({
                             >
                               {/* Active indicator bar */}
                               {pathname === item.url && !collapsed && (
-                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[60%] rounded-full active-indicator animate-indicator-grow" />
+                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[4px] h-[60%] rounded-r-full bg-blue-600 dark:active-indicator animate-indicator-grow" />
                               )}
                               
                               {collapsed ? (

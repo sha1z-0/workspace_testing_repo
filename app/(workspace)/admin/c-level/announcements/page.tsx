@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
+import { PageHeader } from "@/components/ui/page-header"
 
 export default function AnnouncementsPage() {
   const { user } = useAuth()
@@ -66,24 +67,12 @@ export default function AnnouncementsPage() {
       transition={{ duration: 0.5 }}
       className="space-y-8"
     >
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/90 to-blue-600 p-8 text-white shadow-xl ring-1 ring-white/10 dark:from-blue-900 dark:to-slate-900"
-      >
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-cyan-400/20 blur-2xl" />
-
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl mb-2">Announcements</h1>
-            <p className="text-indigo-100 max-w-xl text-lg">
-              Create and broadcast important updates to your organization
-            </p>
-          </div>
-          <CreateAnnouncement onSuccess={fetchData} />
-        </div>
-      </motion.div>
+      <PageHeader
+        title="Announcements"
+        description="Create and broadcast important updates to your organization"
+        icon={Megaphone}
+        action={<CreateAnnouncement onSuccess={fetchData} />}
+      />
 
       <motion.div
         variants={{
@@ -98,7 +87,7 @@ export default function AnnouncementsPage() {
         className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
       >
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-          <Card className="border-2 border-primary/20 shadow-2xl bg-card/90 backdrop-blur-md hover:shadow-primary/20 hover:border-primary/40 transition-all duration-300 hover:-translate-y-1">
+          <Card className="border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Announcements</CardTitle>
               <div className="h-10 w-10 rounded-xl bg-blue-500/20 flex items-center justify-center ring-1 ring-blue-500/30">
@@ -112,7 +101,7 @@ export default function AnnouncementsPage() {
           </Card>
         </motion.div>
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-          <Card className="border-2 border-purple-500/20 shadow-2xl bg-card/90 backdrop-blur-md hover:shadow-purple-500/20 hover:border-purple-500/40 transition-all duration-300 hover:-translate-y-1">
+          <Card className="border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Posted Today</CardTitle>
               <div className="h-10 w-10 rounded-xl bg-purple-500/20 flex items-center justify-center ring-1 ring-purple-500/30">
@@ -126,7 +115,7 @@ export default function AnnouncementsPage() {
           </Card>
         </motion.div>
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-          <Card className="border-2 border-orange-500/20 shadow-2xl bg-card/90 backdrop-blur-md hover:shadow-orange-500/20 hover:border-orange-500/40 transition-all duration-300 hover:-translate-y-1">
+          <Card className="border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">High Priority</CardTitle>
               <div className="h-10 w-10 rounded-xl bg-orange-500/20 flex items-center justify-center ring-1 ring-orange-500/30">
@@ -152,7 +141,7 @@ export default function AnnouncementsPage() {
       </div>
 
       {filteredAnnouncements.length === 0 ? (
-        <Card className="border-2 border-primary/20 shadow-2xl bg-card/90 backdrop-blur-md rounded-2xl">
+        <Card className="border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Megaphone className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">No announcements found</h3>
@@ -167,7 +156,7 @@ export default function AnnouncementsPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="border-2 border-primary/20 shadow-2xl bg-card/90 backdrop-blur-md rounded-2xl">
+        <Card className="border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
           <CardContent className="p-6">
             <AnnouncementsList announcements={filteredAnnouncements} onUpdate={fetchData} />
           </CardContent>

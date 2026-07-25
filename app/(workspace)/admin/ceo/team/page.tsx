@@ -8,7 +8,16 @@ import { usersAPI, projectsAPI } from "@/lib/api"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { PageHeader } from "@/components/ui/page-header"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
@@ -19,6 +28,7 @@ export default function TeamManagementPage() {
   const [users, setUsers] = useState<any[]>([])
   const [departments, setDepartments] = useState<string[]>([])
   const [projects, setProjects] = useState<any[]>([])
+  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false)
   
   // Dialog states
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
@@ -143,17 +153,31 @@ export default function TeamManagementPage() {
   
   return (
     <div className="space-y-8">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/90 to-blue-600 p-8 text-white shadow-xl ring-1 ring-white/10 dark:from-blue-900 dark:to-slate-900">
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-cyan-400/20 blur-2xl" />
-
-        <div className="relative z-10">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl mb-2">Team Management</h1>
-          <p className="text-indigo-100 max-w-xl text-lg">
-            Manage teams, assignments, and departmental structure
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Team Management"
+        description={`Oversee ${users.length} active employees across ${departments.length} departments.`}
+        icon={Users}
+        action={
+          <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg" className="bg-white text-primary hover:bg-slate-100 shadow-xl hover:shadow-2xl transition-all hover:scale-105 border-none">
+                <UserPlus className="mr-2 h-5 w-5" />
+                <span className="font-semibold">Add Employee</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Employee</DialogTitle>
+                <DialogDescription>Create a new employee profile to add to the team.</DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCreateUserDialogOpen(false)}>Cancel</Button>
+                <Button>Save Employee</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        }
+      />
       
       <Tabs defaultValue="overview">
         <TabsList className="bg-card/30 dark:bg-slate-900/30 p-1.5 rounded-2xl backdrop-blur-xl border border-border/50 w-full md:w-auto inline-flex h-auto gap-2">
@@ -164,7 +188,7 @@ export default function TeamManagementPage() {
         
         <TabsContent value="overview" className="mt-6 space-y-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-2 border-primary/20 shadow-xl bg-gradient-to-br from-blue-500/10 to-blue-600/5 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
+            <Card className="border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
                 <div className="h-10 w-10 rounded-xl bg-blue-500/20 flex items-center justify-center ring-2 ring-blue-500/30">
@@ -178,7 +202,7 @@ export default function TeamManagementPage() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="border-2 border-primary/20 shadow-xl bg-gradient-to-br from-green-500/10 to-green-600/5 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
+            <Card className="border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Leadership Team</CardTitle>
                 <div className="h-10 w-10 rounded-xl bg-green-500/20 flex items-center justify-center ring-2 ring-green-500/30">
@@ -194,7 +218,7 @@ export default function TeamManagementPage() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="border-2 border-primary/20 shadow-xl bg-gradient-to-br from-purple-500/10 to-purple-600/5 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
+            <Card className="border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Departments</CardTitle>
                 <div className="h-10 w-10 rounded-xl bg-purple-500/20 flex items-center justify-center ring-2 ring-purple-500/30">
@@ -208,7 +232,7 @@ export default function TeamManagementPage() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="border-2 border-primary/20 shadow-xl bg-gradient-to-br from-orange-500/10 to-orange-600/5 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
+            <Card className="border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
                 <div className="h-10 w-10 rounded-xl bg-orange-500/20 flex items-center justify-center ring-2 ring-orange-500/30">
@@ -278,7 +302,7 @@ export default function TeamManagementPage() {
                     return (
                       <div 
                         key={role} 
-                        className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-card to-card/50 border border-border/50 p-3.5 hover:border-primary/40 transition-all duration-300 hover:shadow-lg"
+                        className="group relative overflow-hidden rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-200/70 dark:border-white/10 p-3.5 hover:border-slate-500/50 transition-all duration-300 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]"
                       >
                         <div className="relative z-10">
                           <div className={`h-10 w-10 rounded-lg bg-gradient-to-br ${roleConfig.gradient} flex items-center justify-center shadow-md mb-2.5`}>

@@ -24,6 +24,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { PageHeader } from "@/components/ui/page-header"
+import { AnimatedTabs } from "@/components/ui/animated-tabs"
+
 import { toast } from "@/components/ui/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -239,16 +242,16 @@ export default function CalendarPage() {
 
       try {
         setLoading(true);
-        
+
         // Fetch all users for member selection and calendar events
         const { usersAPI, calendarEventsAPI } = await import('@/lib/api');
         const [users, calendarEvents] = await Promise.all([
           usersAPI.getAll(),
           calendarEventsAPI.getAll(user.id)
         ]);
-        
+
         setAllUsers(users.filter(u => u.uid !== user.id)); // Exclude current user
-        
+
         // Transform calendar events to match component state
         const transformedEvents = calendarEvents.map(event => ({
           id: event.id,
@@ -266,7 +269,7 @@ export default function CalendarPage() {
           addToGoogleCalendar: event.addToGoogleCalendar,
           notifyOnDashboard: event.notifyOnDashboard,
         }));
-        
+
         setEvents(transformedEvents);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -334,7 +337,7 @@ export default function CalendarPage() {
   const saveEventToDatabase = async (eventData: CalendarEvent) => {
     try {
       const { calendarEventsAPI } = await import('@/lib/api');
-      
+
       const savedEvent = await calendarEventsAPI.createEvent({
         title: eventData.title,
         description: eventData.description,
@@ -353,7 +356,7 @@ export default function CalendarPage() {
         addToGoogleCalendar: eventData.addToGoogleCalendar,
         notifyOnDashboard: eventData.notifyOnDashboard,
       });
-      
+
       console.log("Calendar event saved successfully:", savedEvent);
       return { id: savedEvent.id };
     } catch (error) {
@@ -371,31 +374,31 @@ export default function CalendarPage() {
       })
       return
     }
-    
+
     // Validation
     let hasError = false
     let scrollTarget = ""
 
-    if (!title.trim()) { 
-      setTitleError(true); 
+    if (!title.trim()) {
+      setTitleError(true);
       hasError = true;
       if (!scrollTarget) scrollTarget = "title-field";
     } else { setTitleError(false) }
-    
-    if (!selectedDate) { 
-      setDateError(true); 
+
+    if (!selectedDate) {
+      setDateError(true);
       hasError = true;
       if (!scrollTarget) scrollTarget = "date-field";
     } else { setDateError(false) }
-    
-    if (!startTime) { 
-      setStartTimeError(true); 
+
+    if (!startTime) {
+      setStartTimeError(true);
       hasError = true;
       if (!scrollTarget) scrollTarget = "time-fields";
     } else { setStartTimeError(false) }
-    
-    if (!endTime) { 
-      setEndTimeError(true); 
+
+    if (!endTime) {
+      setEndTimeError(true);
       hasError = true;
       if (!scrollTarget) scrollTarget = "time-fields";
     } else { setEndTimeError(false) }
@@ -415,10 +418,10 @@ export default function CalendarPage() {
     // Past datetime check
     const [startHours, startMinutes] = startTime.split(':').map(Number)
     const [endHours, endMinutes] = endTime.split(':').map(Number)
-    
+
     const startDateTimeCheck = new Date(selectedDate!)
     startDateTimeCheck.setHours(startHours, startMinutes, 0, 0)
-    
+
     if (startDateTimeCheck.getTime() < Date.now()) {
       setPastDatetimeError(true)
       toast({
@@ -663,8 +666,8 @@ export default function CalendarPage() {
   }
 
   const handleMemberToggle = (userId: string) => {
-    setInvitedMembers(prev => 
-      prev.includes(userId) 
+    setInvitedMembers(prev =>
+      prev.includes(userId)
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     )
@@ -688,57 +691,40 @@ export default function CalendarPage() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="space-y-4 min-h-screen p-1"
-      style={{ background: "#0B0F1A" }}
+      className="space-y-6 min-h-screen p-1"
     >
       {/* ─── Part A: Compact Hero ─── */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-[20px] border border-white/[0.06] bg-[#121826] p-5"
-      >
-        <div className="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-[#3B82F6]/8 blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-[#3B82F6]/10 border border-[#3B82F6]/20 px-3 py-1 mb-2">
-              <CalendarIcon className="h-3 w-3 text-[#93C5FD]" />
-              <span className="text-[11px] font-semibold text-[#93C5FD] uppercase tracking-wider">Schedule</span>
-            </div>
-            <h1 className="text-[26px] font-semibold text-[#F1F5F9] tracking-tight">Calendar</h1>
-            <p className="text-[#64748B] text-[13px] mt-0.5">Manage your schedule and events.</p>
-          </div>
+      <PageHeader
+        title="Calendar"
+        description="Manage your schedule and events."
+        icon={CalendarIcon}
+        action={
           <div className="flex items-center gap-3">
-            {/* View switcher — pill style matching Tasks page */}
-            <div className="flex gap-1 p-1 rounded-[10px] bg-[#0F1523] border border-white/[0.06]">
-              {(["day", "week", "month"] as const).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => setView(v)}
-                  className={`px-3 py-1.5 rounded-[8px] text-[13px] font-medium capitalize transition-colors ${
-                    view === v
-                      ? "bg-white/10 text-[#F1F5F9]"
-                      : "text-[#64748B] hover:text-[#CBD5E1]"
-                  }`}
-                >
-                  {v}
-                </button>
-              ))}
+            <div className="w-fit">
+              <AnimatedTabs
+                tabs={[
+                  { value: "day", label: "Day" },
+                  { value: "week", label: "Week" },
+                  { value: "month", label: "Month" }
+                ]}
+                activeTab={view}
+                onTabChange={(v) => setView(v as "day" | "week" | "month")}
+                layoutId="calendarViewTab"
+              />
             </div>
-            {/* New Event button — UNCHANGED onClick */}
             {["CEO", "C_LEVEL", "LEAD"].includes(user?.role || "") && (
-              <button
+              <Button
                 type="button"
                 onClick={() => setCreateDialogOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[10px] bg-[#3B82F6] hover:bg-[#2563EB] text-white text-[13px] font-medium transition-colors"
+                className="bg-white text-slate-900 hover:bg-slate-100 border-none shadow-lg"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-4 w-4 mr-2" />
                 New Event
-              </button>
+              </Button>
             )}
           </div>
-        </div>
-      </motion.div>
+        }
+      />
 
       {/* Calendar Navigation */}
       <div className="flex items-center justify-between px-1">
@@ -746,17 +732,17 @@ export default function CalendarPage() {
           <button
             type="button"
             onClick={handlePrevMonth}
-            className="p-2 rounded-[8px] text-[#64748B] hover:text-[#CBD5E1] hover:bg-white/[0.06] transition-colors"
+            className="p-2 rounded-[8px] text-slate-500 dark:text-[#64748B] hover:text-slate-900 dark:hover:text-[#CBD5E1] hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <h2 className="text-[18px] font-semibold text-[#F1F5F9] px-2 whitespace-nowrap">
+          <h2 className="text-[18px] font-semibold text-slate-900 dark:text-[#F1F5F9] px-2 whitespace-nowrap">
             {date.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
           </h2>
           <button
             type="button"
             onClick={handleNextMonth}
-            className="p-2 rounded-[8px] text-[#64748B] hover:text-[#CBD5E1] hover:bg-white/[0.06] transition-colors"
+            className="p-2 rounded-[8px] text-slate-500 dark:text-[#64748B] hover:text-slate-900 dark:hover:text-[#CBD5E1] hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -769,7 +755,7 @@ export default function CalendarPage() {
               document.getElementById('today-cell')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 100);
           }}
-          className="px-3 py-1.5 rounded-[8px] border border-white/[0.08] bg-[#121826] text-[13px] font-medium text-[#94A3B8] hover:text-[#F1F5F9] hover:border-white/[0.14] transition-colors"
+          className="px-3 py-1.5 rounded-[8px] border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#121826] text-[13px] font-medium text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-[#F1F5F9] hover:bg-slate-50 hover:border-slate-300 dark:hover:border-white/[0.14] transition-colors"
         >
           Today
         </button>
@@ -779,19 +765,19 @@ export default function CalendarPage() {
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1 }}
-        className="rounded-[14px] border border-white/[0.06] bg-[#121826] overflow-hidden"
+        className="rounded-[14px] border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-[#121826] overflow-hidden shadow-[0_8px_30px_rgba(100,116,139,0.15)] dark:shadow-none"
       >
         {view === "month" && (
           <div className="overflow-x-auto">
             <div className="min-w-[700px] p-4">
-              <div className="grid grid-cols-7 mb-2 border-b border-white/[0.04] pb-2">
+              <div className="grid grid-cols-7 mb-2 border-b border-slate-200 dark:border-white/[0.04] pb-2">
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                  <div key={day} className="text-center text-[11px] font-semibold text-[#475569] py-2 uppercase tracking-widest">
+                  <div key={day} className="text-center text-[11px] font-semibold text-slate-500 dark:text-[#475569] py-2 uppercase tracking-widest">
                     {day}
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 gap-[1px] bg-white/[0.03]">
+              <div className="grid grid-cols-7 gap-[1px] bg-slate-100 dark:bg-white/[0.03]">
                 {monthData.map((day, index) => {
                   const isToday = day &&
                     day.getDate() === new Date().getDate() &&
@@ -803,9 +789,9 @@ export default function CalendarPage() {
                       key={index}
                       id={isToday ? "today-cell" : undefined}
                       className={cn(
-                        "min-h-[110px] p-2.5 transition-colors duration-150 bg-[#121826]",
-                        day ? "hover:bg-[#0F1523] cursor-default" : "",
-                        isToday && "bg-[#0F1523] ring-1 ring-inset ring-[#3B82F6]/30"
+                        "min-h-[110px] p-2.5 transition-colors duration-150 bg-white dark:bg-[#121826]",
+                        day ? "hover:bg-slate-50 dark:hover:bg-[#0F1523] cursor-default" : "",
+                        isToday && "bg-slate-50 dark:bg-[#0F1523] ring-1 ring-inset ring-blue-500/30 dark:ring-[#3B82F6]/30"
                       )}
                     >
                       {day && (
@@ -813,8 +799,8 @@ export default function CalendarPage() {
                           <div className={cn(
                             "text-[13px] font-medium mb-2 w-6 h-6 flex items-center justify-center rounded-full ml-auto",
                             isToday
-                              ? "bg-[#3B82F6] text-white text-[12px] font-semibold"
-                              : "text-[#64748B]"
+                              ? "bg-blue-600 dark:bg-[#3B82F6] text-white text-[12px] font-semibold shadow-sm"
+                              : "text-slate-600 dark:text-[#64748B]"
                           )}>
                             {day.getDate()}
                           </div>
@@ -823,10 +809,10 @@ export default function CalendarPage() {
                               <div
                                 key={event.id}
                                 className={cn(
-                                  "truncate rounded-[6px] px-2 py-[3px] text-[11px] cursor-pointer font-medium transition-colors",
+                                  "truncate rounded-[6px] px-2 py-[3px] text-[11px] cursor-pointer font-medium transition-colors border",
                                   event.type === 'meeting'
-                                    ? "bg-[#8B5CF6]/[0.15] text-[#C4B5FD] border border-[#8B5CF6]/25 hover:bg-[#8B5CF6]/[0.25]"
-                                    : "bg-[#3B82F6]/[0.15] text-[#93C5FD] border border-[#3B82F6]/25 hover:bg-[#3B82F6]/[0.25]"
+                                    ? "bg-purple-100 dark:bg-[#8B5CF6]/[0.15] text-purple-700 dark:text-[#C4B5FD] border-purple-200 dark:border-[#8B5CF6]/25 hover:bg-purple-200 dark:hover:bg-[#8B5CF6]/[0.25]"
+                                    : "bg-blue-100 dark:bg-[#3B82F6]/[0.15] text-blue-700 dark:text-[#93C5FD] border-blue-200 dark:border-[#3B82F6]/25 hover:bg-blue-200 dark:hover:bg-[#3B82F6]/[0.25]"
                                 )}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -859,45 +845,45 @@ export default function CalendarPage() {
             const currentDay = new Date(date);
             currentDay.setDate(date.getDate() - date.getDay() + i);
             const isToday = currentDay.getDate() === new Date().getDate() &&
-                            currentDay.getMonth() === new Date().getMonth() &&
-                            currentDay.getFullYear() === new Date().getFullYear();
+              currentDay.getMonth() === new Date().getMonth() &&
+              currentDay.getFullYear() === new Date().getFullYear();
 
             return (
-              <div key={i} className="flex flex-col min-h-[400px] rounded-[14px] bg-[#121826] border border-white/[0.06] overflow-hidden">
+              <div key={i} className="flex flex-col min-h-[400px] rounded-[14px] bg-white dark:bg-[#121826] border border-slate-200 dark:border-white/[0.06] overflow-hidden shadow-[0_8px_30px_rgba(100,116,139,0.15)] dark:shadow-none">
                 <div className={cn(
-                  "p-3 text-center border-b border-white/[0.06]",
-                  isToday ? "bg-[#3B82F6]/10" : ""
+                  "p-3 text-center border-b border-slate-200 dark:border-white/[0.06]",
+                  isToday ? "bg-blue-50 dark:bg-[#3B82F6]/10" : ""
                 )}>
-                  <div className="text-[11px] font-semibold text-[#64748B] uppercase tracking-widest mb-1">
+                  <div className="text-[11px] font-semibold text-slate-500 dark:text-[#64748B] uppercase tracking-widest mb-1">
                     {currentDay.toLocaleDateString("en-US", { weekday: "short" })}
                   </div>
                   <div className={cn(
                     "text-[15px] font-medium w-7 h-7 mx-auto flex items-center justify-center rounded-full",
-                    isToday ? "bg-[#3B82F6] text-white" : "text-[#F1F5F9]"
+                    isToday ? "bg-blue-600 dark:bg-[#3B82F6] text-white shadow-sm" : "text-slate-900 dark:text-[#F1F5F9]"
                   )} id={isToday ? "today-cell" : undefined}>
                     {currentDay.getDate()}
                   </div>
                 </div>
-                
+
                 <div className="flex-1 p-2 space-y-2 overflow-y-auto no-scrollbar">
                   {getEventsForDate(currentDay).map(event => (
                     <div
                       key={event.id}
                       className={cn(
-                        "rounded-[8px] p-2 text-left cursor-pointer border hover:border-white/[0.15] transition-all",
+                        "rounded-[8px] p-2 text-left cursor-pointer border hover:shadow-sm dark:hover:border-white/[0.15] transition-all",
                         event.type === 'meeting'
-                          ? "bg-[#8B5CF6]/[0.10] border-[#8B5CF6]/20"
-                          : "bg-[#3B82F6]/[0.10] border-[#3B82F6]/20"
+                          ? "bg-purple-50 dark:bg-[#8B5CF6]/[0.10] border-purple-200 dark:border-[#8B5CF6]/20"
+                          : "bg-blue-50 dark:bg-[#3B82F6]/[0.10] border-blue-200 dark:border-[#3B82F6]/20"
                       )}
                       onClick={() => handleEventClick(event)}
                     >
                       <div className={cn(
                         "text-[10px] font-semibold mb-1",
-                        event.type === 'meeting' ? "text-[#C4B5FD]" : "text-[#93C5FD]"
+                        event.type === 'meeting' ? "text-purple-600 dark:text-[#C4B5FD]" : "text-blue-600 dark:text-[#93C5FD]"
                       )}>
                         {formatTime(event.startTime)}
                       </div>
-                      <div className="text-[12px] font-medium text-[#F1F5F9] line-clamp-2 leading-tight">
+                      <div className="text-[12px] font-medium text-slate-900 dark:text-[#F1F5F9] line-clamp-2 leading-tight">
                         {event.title}
                       </div>
                     </div>
@@ -915,26 +901,26 @@ export default function CalendarPage() {
           animate={{ opacity: 1 }}
           className="grid gap-4"
         >
-          <div 
+          <div
             id={date.getDate() === new Date().getDate() && date.getMonth() === new Date().getMonth() && date.getFullYear() === new Date().getFullYear() ? "today-cell" : undefined}
-            className="p-5 rounded-[14px] bg-[#121826] border border-white/[0.06]"
+            className="p-5 rounded-[14px] bg-white dark:bg-[#121826] border border-slate-200 dark:border-white/[0.06] shadow-[0_8px_30px_rgba(100,116,139,0.15)] dark:shadow-none"
           >
-            <h3 className="mb-4 text-[17px] font-semibold text-[#F1F5F9] flex items-center gap-2">
+            <h3 className="mb-4 text-[17px] font-semibold text-slate-900 dark:text-[#F1F5F9] flex items-center gap-2">
               {date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
             </h3>
 
             <div className="space-y-4">
               {getEventsForDate(date).length === 0 ? (
-                <div className="flex h-52 flex-col items-center justify-center rounded-[12px] border border-dashed border-white/[0.08] bg-[#0F1523] p-8 text-center">
-                  <div className="w-12 h-12 rounded-full bg-[#3B82F6]/10 border border-[#3B82F6]/20 flex items-center justify-center mb-3">
-                    <CalendarIcon className="h-5 w-5 text-[#93C5FD]" />
+                <div className="flex h-52 flex-col items-center justify-center rounded-[12px] border border-dashed border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0F1523] p-8 text-center">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-[#3B82F6]/10 border border-blue-200 dark:border-[#3B82F6]/20 flex items-center justify-center mb-3">
+                    <CalendarIcon className="h-5 w-5 text-blue-600 dark:text-[#93C5FD]" />
                   </div>
-                  <p className="text-[14px] font-medium text-[#64748B]">No events scheduled</p>
-                  <p className="text-[12px] text-[#475569] mt-1">Create a new event to get started</p>
+                  <p className="text-[14px] font-medium text-slate-500 dark:text-[#64748B]">No events scheduled</p>
+                  <p className="text-[12px] text-slate-500 dark:text-[#475569] mt-1">Create a new event to get started</p>
                   <button
                     type="button"
                     onClick={() => setCreateDialogOpen(true)}
-                    className="mt-3 text-[13px] text-[#93C5FD] hover:text-[#3B82F6] transition-colors"
+                    className="mt-3 text-[13px] text-blue-600 dark:text-[#93C5FD] hover:text-blue-700 dark:hover:text-[#3B82F6] transition-colors"
                   >
                     + Schedule something
                   </button>
@@ -944,7 +930,7 @@ export default function CalendarPage() {
                   <motion.div
                     key={event.id}
                     whileHover={{ x: 3 }}
-                    className="group relative overflow-hidden rounded-[12px] border border-white/[0.06] bg-[#0F1523] p-4 transition-all cursor-pointer hover:border-white/[0.10]"
+                    className="group relative overflow-hidden rounded-[12px] border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-[#0F1523] shadow-[0_8px_30px_rgba(100,116,139,0.15)] dark:shadow-none p-4 transition-all cursor-pointer hover:shadow-[0_12px_40px_rgba(100,116,139,0.25)] dark:hover:shadow-none dark:hover:border-white/[0.10]"
                     onClick={() => handleEventClick(event)}
                   >
                     {/* Left accent bar */}
@@ -956,22 +942,22 @@ export default function CalendarPage() {
                       <div>
                         <div className="flex items-center gap-2 mb-1.5">
                           <span className={cn(
-                            "text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full",
+                            "text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border",
                             event.type === 'meeting'
-                              ? "bg-[#8B5CF6]/[0.15] text-[#C4B5FD]"
-                              : "bg-[#3B82F6]/[0.15] text-[#93C5FD]"
+                              ? "bg-purple-50 dark:bg-[#8B5CF6]/[0.15] text-purple-600 dark:text-[#C4B5FD] border-purple-200 dark:border-transparent"
+                              : "bg-blue-50 dark:bg-[#3B82F6]/[0.15] text-blue-600 dark:text-[#93C5FD] border-blue-200 dark:border-transparent"
                           )}>
                             {event.type === 'meeting' ? 'Meeting' : 'Event'}
                           </span>
-                          <span className="text-[12px] text-[#64748B] flex items-center gap-1">
+                          <span className="text-[12px] text-slate-500 dark:text-[#64748B] flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             {formatTime(event.startTime)} – {formatTime(event.endTime)}
                           </span>
                         </div>
-                        <h4 className="text-[15px] font-semibold text-[#F1F5F9] group-hover:text-[#93C5FD] transition-colors">
+                        <h4 className="text-[15px] font-semibold text-slate-900 dark:text-[#F1F5F9] group-hover:text-blue-600 dark:group-hover:text-[#93C5FD] transition-colors">
                           {event.title}
                         </h4>
-                        <p className="text-[13px] text-[#64748B] mt-0.5 line-clamp-1">{event.description}</p>
+                        <p className="text-[13px] text-slate-500 dark:text-[#64748B] mt-0.5 line-clamp-1">{event.description}</p>
                       </div>
                       <div className="flex flex-wrap gap-2 text-[12px]">
                         {event.location && (
@@ -1134,14 +1120,14 @@ export default function CalendarPage() {
               <p className="text-xs text-muted-foreground">
                 Selected members will receive a notification in their notification bell
               </p>
-              
+
               <div className="grid gap-2 max-h-48 overflow-y-auto pr-2">
                 {allUsers.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No team members available</p>
                 ) : (
                   allUsers.map(u => (
-                    <div 
-                      key={u.uid} 
+                    <div
+                      key={u.uid}
                       className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/50 dark:hover:bg-slate-800/50 transition-colors"
                     >
                       <Checkbox
@@ -1149,8 +1135,8 @@ export default function CalendarPage() {
                         checked={invitedMembers.includes(u.uid)}
                         onCheckedChange={() => handleMemberToggle(u.uid)}
                       />
-                      <Label 
-                        htmlFor={`member-${u.uid}`} 
+                      <Label
+                        htmlFor={`member-${u.uid}`}
                         className="text-sm font-normal cursor-pointer flex-1"
                       >
                         <div className="flex items-center justify-between">

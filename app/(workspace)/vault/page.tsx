@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/use-toast"
+import { PageHeader } from "@/components/ui/page-header"
+import { AnimatedTabs } from "@/components/ui/animated-tabs"
 import { vaultAPI } from "@/lib/api"
 import type { VaultItem } from "@/lib/firebase-types"
 import { useEffect, useState } from "react"
@@ -205,24 +207,11 @@ export default function VaultPage() {
   return (
     <div className="min-h-screen p-1 space-y-8">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 to-slate-900 p-8 text-white shadow-xl ring-1 ring-white/10"
-      >
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-white/5 blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-indigo-500/10 blur-2xl" />
-
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl mb-2 flex items-center gap-3">
-              <Lock className="h-8 w-8" /> Company Vault
-            </h1>
-            <p className="text-slate-300 max-w-xl text-lg">
-              Securely store and manage sensitive company assets — documents, API keys, and credentials.
-            </p>
-          </div>
-
+      <PageHeader
+        title="Company Vault"
+        description="Securely store and manage sensitive company assets — documents, API keys, and credentials."
+        icon={Lock}
+        action={
           <Button
             size="lg"
             onClick={() => { resetForm(); setIsAddDialogOpen(true) }}
@@ -231,15 +220,15 @@ export default function VaultPage() {
             <Plus className="mr-2 h-5 w-5" />
             Add New Item
           </Button>
-        </div>
-      </motion.div>
+        }
+      />
 
       {/* Controls */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative flex-1 w-full md:max-w-md">
           <Input
             placeholder="Search vault items..."
-            className="pl-10 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-white/20"
+            className="pl-10 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200/70 dark:border-white/20"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -249,18 +238,12 @@ export default function VaultPage() {
 
       {/* Category Tabs */}
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-1 rounded-xl border border-white/10 w-full justify-start overflow-x-auto">
-          {CATEGORIES.map((cat) => (
-            <TabsTrigger key={cat.value} value={cat.value} className="relative data-[state=active]:bg-transparent data-[state=active]:text-white">
-              {activeTab === cat.value && (
-                <motion.div layoutId="vaultTab" className="absolute inset-0 bg-slate-700 rounded-lg" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />
-              )}
-              <span className="relative z-10 flex items-center gap-1.5 text-xs">
-                <cat.icon className="h-3.5 w-3.5" /> {cat.label}
-              </span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <AnimatedTabs
+          tabs={[...CATEGORIES]}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          layoutId="vaultTab"
+        />
 
         <AnimatePresence mode="wait">
           <TabsContent value={activeTab} className="mt-6 outline-none">
@@ -272,7 +255,7 @@ export default function VaultPage() {
               className="grid gap-6 md:grid-cols-2 xl:grid-cols-3"
             >
               {filteredItems.length === 0 ? (
-                <motion.div variants={itemVariants} className="col-span-full flex h-60 flex-col items-center justify-center rounded-2xl border border-dashed border-white/20 bg-white/5 p-8 text-center">
+                <motion.div variants={itemVariants} className="col-span-full flex h-60 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200/70 dark:border-white/20 bg-white/5 p-8 text-center">
                   <div className="h-16 w-16 rounded-full bg-slate-100/50 dark:bg-slate-800/50 flex items-center justify-center mb-4">
                     <Shield className="h-8 w-8 text-muted-foreground/50" />
                   </div>
@@ -284,7 +267,7 @@ export default function VaultPage() {
               ) : (
                 filteredItems.map((item) => (
                   <motion.div key={item.id} variants={itemVariants} layoutId={item.id} className="h-full">
-                    <Card className="h-full flex flex-col group relative overflow-hidden border border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
+                    <Card className="h-full flex flex-col group relative overflow-hidden border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
                       <CardHeader className="pb-3 pt-5">
                         <div className="flex items-start justify-between">
                           <div className="space-y-2 flex-1 min-w-0">

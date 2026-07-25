@@ -10,6 +10,7 @@ import { TeamsList } from "@/components/teams-list"
 import { CreateTeamDialog } from "@/components/create-team-dialog"
 import { Input } from "@/components/ui/input"
 import { motion } from "framer-motion"
+import { PageHeader } from "@/components/ui/page-header"
 
 export default function TeamPage() {
   const { user } = useAuth()
@@ -60,27 +61,17 @@ export default function TeamPage() {
       transition={{ duration: 0.5 }}
       className="space-y-8"
     >
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/90 to-blue-600 p-8 text-white shadow-xl ring-1 ring-white/10 dark:from-blue-900 dark:to-slate-900"
-      >
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-cyan-400/20 blur-2xl" />
-
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl mb-2">Teams</h1>
-            <p className="text-indigo-100 max-w-xl text-lg">
-              Manage team structures and assignments
-            </p>
-          </div>
-          <Button size="lg" onClick={() => setIsCreateTeamOpen(true)} className="bg-white text-primary hover:bg-white/90">
+      <PageHeader
+        title="Teams"
+        description="Manage team structures and assignments"
+        icon={Users}
+        action={
+          <Button size="lg" onClick={() => setIsCreateTeamOpen(true)} className="bg-white text-slate-900 hover:bg-slate-100 shadow-xl hover:shadow-2xl transition-all hover:scale-105 border-none">
             <Plus className="mr-2 h-5 w-5" />
             New Team
           </Button>
-        </div>
-      </motion.div>
+        }
+      />
 
       <motion.div
         variants={{
@@ -95,7 +86,7 @@ export default function TeamPage() {
         className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
       >
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-          <Card className="border-2 border-primary/20 shadow-2xl bg-card/90 backdrop-blur-md hover:shadow-primary/20 hover:border-primary/40 transition-all duration-300 hover:-translate-y-1">
+          <Card className="border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Teams</CardTitle>
               <div className="h-10 w-10 rounded-xl bg-blue-500/20 flex items-center justify-center ring-1 ring-blue-500/30">
@@ -109,7 +100,7 @@ export default function TeamPage() {
           </Card>
         </motion.div>
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-          <Card className="border-2 border-green-500/20 shadow-2xl bg-card/90 backdrop-blur-md hover:shadow-green-500/20 hover:border-green-500/40 transition-all duration-300 hover:-translate-y-1">
+          <Card className="border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Active Members</CardTitle>
               <div className="h-10 w-10 rounded-xl bg-green-500/20 flex items-center justify-center ring-1 ring-green-500/30">
@@ -123,7 +114,7 @@ export default function TeamPage() {
           </Card>
         </motion.div>
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-          <Card className="border-2 border-purple-500/20 shadow-2xl bg-card/90 backdrop-blur-md hover:shadow-purple-500/20 hover:border-purple-500/40 transition-all duration-300 hover:-translate-y-1">
+          <Card className="border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Team Leads</CardTitle>
               <div className="h-10 w-10 rounded-xl bg-purple-500/20 flex items-center justify-center ring-1 ring-purple-500/30">
@@ -149,7 +140,7 @@ export default function TeamPage() {
       </div>
 
       {filteredTeams.length === 0 ? (
-        <Card className="border-2 border-primary/20 shadow-2xl bg-card/90 backdrop-blur-md rounded-2xl">
+        <Card className="border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Users className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">No teams found</h3>
@@ -164,7 +155,7 @@ export default function TeamPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="border-2 border-primary/20 shadow-2xl bg-card/90 backdrop-blur-md rounded-2xl">
+        <Card className="border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
           <CardContent className="p-6">
             <TeamsList teams={filteredTeams} onUpdate={fetchData} />
           </CardContent>

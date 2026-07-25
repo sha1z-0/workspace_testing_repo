@@ -81,7 +81,7 @@ export default function LeadProjectsPage() {
           <Button 
             size="lg" 
             onClick={() => setIsCreateDialogOpen(true)}
-            className="shadow-lg bg-white text-indigo-600 hover:bg-indigo-50 border-none"
+            className="shadow-lg bg-white text-slate-900 hover:bg-slate-100 border-none"
           >
             <Plus className="mr-2 h-5 w-5" />
             New Project

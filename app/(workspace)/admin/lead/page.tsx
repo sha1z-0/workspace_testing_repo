@@ -400,7 +400,7 @@ export default function LeadAdminDashboard() {
 
               <Dialog open={isCreateAnnouncementOpen} onOpenChange={setIsCreateAnnouncementOpen}>
                 <DialogTrigger asChild>
-                  <Button size="lg" variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white backdrop-blur-sm">
+                  <Button size="lg" variant="outline" className="bg-white/10 border-slate-200/70 dark:border-white/20 text-white hover:bg-white/20 hover:text-white backdrop-blur-sm">
                     <Bell className="mr-2 h-5 w-5" />
                     Create Announcement
                   </Button>

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
+import { PageHeader } from "@/components/ui/page-header"
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -141,36 +142,27 @@ export default function DashboardPage() {
       className="space-y-8 p-1"
     >
       {/* Hero Section */}
-      <motion.div variants={itemVariants} className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/90 to-blue-600 p-8 text-white shadow-xl ring-1 ring-white/10 dark:from-blue-900 dark:to-slate-900">
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-cyan-400/20 blur-2xl" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl mb-2">
-              {greeting}, {user?.name?.split(" ")[0]}
-            </h1>
-            <p className="text-blue-100/90 text-lg max-w-xl">
-              Here's what's happening in your workspace today. You have <span className="font-semibold text-white">{todayTasks.length} tasks</span> due today.
-            </p>
-          </div>
+      <PageHeader
+        title={`${greeting}, ${user?.name?.split(" ")[0]}`}
+        description={`Here's what's happening in your workspace today. You have ${todayTasks.length} tasks due today.`}
+        action={
           <div className="flex items-center gap-3">
-            <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 flex flex-col items-center min-w-[100px] border border-white/10">
+            <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 flex flex-col items-center min-w-[100px] border border-slate-200/70 dark:border-white/10">
               <span className="text-3xl font-bold">{tasks.filter(t => t.status === 'completed').length}</span>
               <span className="text-xs text-blue-100 uppercase tracking-wider font-medium">Completed</span>
             </div>
-            <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 flex flex-col items-center min-w-[100px] border border-white/10">
+            <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 flex flex-col items-center min-w-[100px] border border-slate-200/70 dark:border-white/10">
               <span className="text-3xl font-bold">{tasks.length}</span>
               <span className="text-xs text-blue-100 uppercase tracking-wider font-medium">Total</span>
             </div>
           </div>
-        </div>
-      </motion.div>
+        }
+      />
 
       {/* Stats Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
-          <Card className="border border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 overflow-hidden relative group transition-all duration-300 hover:shadow-[0_0_30px_rgba(59,130,246,0.3)] hover:border-blue-500/50">
+          <Card className="border border-slate-200 dark:border-slate-200/70 dark:border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 overflow-hidden relative group transition-all duration-300 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)] hover:border-slate-500/50">
             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
               <CheckSquare className="w-24 h-24 text-primary" />
             </div>
@@ -193,7 +185,7 @@ export default function DashboardPage() {
         </motion.div>
 
         <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
-          <Card className="border border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 overflow-hidden relative group transition-all duration-300 hover:shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:border-purple-500/50">
+          <Card className="border border-slate-200 dark:border-slate-200/70 dark:border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 overflow-hidden relative group transition-all duration-300 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)] hover:border-slate-500/50">
             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
               <Calendar className="w-24 h-24 text-purple-500" />
             </div>
@@ -213,7 +205,7 @@ export default function DashboardPage() {
         </motion.div>
 
         <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
-          <Card className="border border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 overflow-hidden relative group transition-all duration-300 hover:shadow-[0_0_30px_rgba(236,72,153,0.3)] hover:border-pink-500/50">
+          <Card className="border border-slate-200 dark:border-slate-200/70 dark:border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 overflow-hidden relative group transition-all duration-300 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)] hover:border-slate-500/50">
             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
               <MessageSquare className="w-24 h-24 text-pink-500" />
             </div>
@@ -257,7 +249,7 @@ export default function DashboardPage() {
           </motion.div>
         ) : (
           <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
-            <Card className="border border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 overflow-hidden relative group transition-all duration-300 hover:shadow-[0_0_30px_rgba(245,158,11,0.3)] hover:border-amber-500/50">
+            <Card className="border border-slate-200 dark:border-slate-200/70 dark:border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 overflow-hidden relative group transition-all duration-300 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)] hover:border-slate-500/50">
               <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
                 <AlertCircle className="w-24 h-24 text-amber-500" />
               </div>

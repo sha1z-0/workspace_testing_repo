@@ -5,10 +5,10 @@ import { cn } from "@/lib/utils"
 type ButtonVariant = "primary" | "primary-purple" | "primary-amber" | "secondary"
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary:         "bg-[#3B82F6] text-white hover:bg-[#2563EB]",
-  "primary-purple": "bg-[#8B5CF6] text-white hover:bg-[#7C3AED]",
-  "primary-amber":  "bg-[#FBBF24] text-[#42280A] hover:bg-[#F59E0B]",
-  secondary:       "bg-transparent border border-white/[0.12] text-[#CBD5E1] hover:bg-white/[0.06]",
+  primary:         "bg-blue-600 dark:bg-[#3B82F6] text-white hover:bg-blue-700 dark:hover:bg-[#2563EB]",
+  "primary-purple": "bg-purple-600 dark:bg-[#8B5CF6] text-white hover:bg-purple-700 dark:hover:bg-[#7C3AED]",
+  "primary-amber":  "bg-amber-500 dark:bg-[#FBBF24] text-amber-950 dark:text-[#42280A] hover:bg-amber-600 dark:hover:bg-[#F59E0B]",
+  secondary:       "bg-transparent border border-slate-200 dark:border-white/[0.12] text-slate-700 dark:text-[#CBD5E1] hover:bg-slate-50 dark:hover:bg-white/[0.06]",
 }
 
 type TaskButtonProps = {
@@ -47,7 +47,7 @@ export function TaskButtonGhost({ onClick, children, className, disabled }: { on
       disabled={disabled}
       className={cn(
         "inline-flex items-center justify-center gap-1 rounded-[10px] px-2.5 py-1.5 text-[12px] font-medium",
-        "text-[#94A3B8] hover:text-[#CBD5E1] hover:bg-white/[0.06] transition-colors",
+        "text-slate-500 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-[#CBD5E1] hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors",
         "disabled:opacity-50 disabled:pointer-events-none",
         className
       )}

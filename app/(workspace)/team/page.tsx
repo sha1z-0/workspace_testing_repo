@@ -8,6 +8,8 @@ import { Loader2, CheckSquare, AlertCircle, Clock } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
+import { PageHeader } from "@/components/ui/page-header"
+import { Users } from "lucide-react"
 
 export default function TeamOverviewPage() {
   const { user } = useAuth()
@@ -101,14 +103,15 @@ export default function TeamOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Team Overview</h2>
-        <p className="text-muted-foreground">Monitor your team's workload and performance</p>
-      </div>
+      <PageHeader
+        title="Team Overview"
+        description="Monitor your team's workload and performance"
+        icon={Users}
+      />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {tasksByAssignee.map((member) => (
-          <Card key={member.uid} className="flex flex-col">
+          <Card key={member.uid} className="flex flex-col border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
             <CardHeader className="pb-2">
               <div className="flex items-center space-x-4">
                 <Avatar className="h-10 w-10">

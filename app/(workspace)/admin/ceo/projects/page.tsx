@@ -9,6 +9,7 @@ import { Loader2, Plus, Search, Filter, Calendar, Users, BarChart, Pencil, Trash
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { PageHeader } from "@/components/ui/page-header"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -285,34 +286,22 @@ export default function ProjectManagementPage() {
       className="space-y-8 p-1"
     >
       {/* Hero Section */}
-      <motion.div variants={itemVariants} className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/90 to-blue-600 p-8 text-white shadow-xl ring-1 ring-white/10 dark:from-blue-900 dark:to-slate-900">
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-cyan-400/20 blur-2xl" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 mb-4 rounded-full bg-white/20 backdrop-blur-sm border border-white/10">
-              <FolderPlus className="h-4 w-4" />
-              <span className="text-sm font-semibold">Project Portfolio</span>
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl mb-2">
-              Project Management
-            </h1>
-            <p className="text-blue-100/90 text-lg max-w-xl">
-              Manage {filteredProjects.length} active projects with <span className="font-semibold text-white">{users.length} team members</span> collaboration.
-            </p>
-          </div>
-          <Button size="lg" onClick={() => setIsCreateDialogOpen(true)} className="bg-white text-primary hover:bg-white/90 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
+      <PageHeader
+        title="Project Management"
+        description={`Manage ${filteredProjects.length} active projects with ${users.length} team members collaboration.`}
+        icon={Briefcase}
+        action={
+          <Button size="lg" onClick={() => setIsCreateDialogOpen(true)} className="bg-white text-slate-900 hover:bg-slate-100 shadow-xl hover:shadow-2xl transition-all hover:scale-105 border-none">
             <Plus className="mr-2 h-5 w-5" />
             <span className="font-semibold">New Project</span>
           </Button>
-        </div>
-      </motion.div>
+        }
+      />
 
       {/* Stats Grid */}
       <div className="grid gap-6 md:grid-cols-3">
         <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
-          <Card className="border border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 overflow-hidden relative group transition-all duration-300 hover:shadow-[0_0_30px_rgba(59,130,246,0.3)] hover:border-blue-500/50">
+          <Card className="border border-slate-200/70 dark:border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 overflow-hidden relative group transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
               <FolderPlus className="w-24 h-24 text-blue-500" />
             </div>
@@ -333,7 +322,7 @@ export default function ProjectManagementPage() {
         </motion.div>
 
         <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
-          <Card className="border border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 overflow-hidden relative group transition-all duration-300 hover:shadow-[0_0_30px_rgba(34,197,94,0.3)] hover:border-green-500/50">
+          <Card className="border border-slate-200/70 dark:border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 overflow-hidden relative group transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
               <BarChart className="w-24 h-24 text-green-500" />
             </div>
@@ -353,7 +342,7 @@ export default function ProjectManagementPage() {
         </motion.div>
 
         <motion.div variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
-          <Card className="border border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 overflow-hidden relative group transition-all duration-300 hover:shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:border-purple-500/50">
+          <Card className="border border-slate-200/70 dark:border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 overflow-hidden relative group transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
               <Users className="w-24 h-24 text-purple-500" />
             </div>
@@ -379,7 +368,7 @@ export default function ProjectManagementPage() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             placeholder="Search projects by name or description..."
-            className="pl-12 h-12 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg border-white/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all shadow-md"
+            className="pl-12 h-12 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg border-slate-200/70 dark:border-white/20 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all shadow-md"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -436,7 +425,7 @@ export default function ProjectManagementPage() {
               transition={{ delay: index * 0.05 }}
               whileHover={{ y: -5, transition: { duration: 0.2 } }}
             >
-              <Card className="h-full border border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 transition-all duration-300 hover:shadow-xl hover:border-primary/50">
+              <Card className="h-full border border-slate-200/70 dark:border-white/20 shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg ring-1 ring-slate-900/5 dark:ring-white/10 transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start gap-3">
                     <div className="flex-1 min-w-0">

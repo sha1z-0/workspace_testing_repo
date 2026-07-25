@@ -6,6 +6,7 @@ import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { PageHeader } from "@/components/ui/page-header"
 import { usersAPI, chatAPI } from "@/lib/api"
 import { useEffect, useState, useRef } from "react"
 import { Loader2, Send, Plus, Search, MessageSquare, UserPlus, Users } from "lucide-react"
@@ -13,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { motion, AnimatePresence } from "framer-motion"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AnimatedTabs } from "@/components/ui/animated-tabs"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
@@ -366,25 +368,14 @@ export default function ChatPage() {
       transition={{ duration: 0.5 }}
       className="flex h-[calc(100vh-8rem)] flex-col space-y-6"
     >
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/90 to-blue-600 p-8 text-white shadow-xl ring-1 ring-white/10 dark:from-blue-900 dark:to-slate-900"
-      >
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-cyan-400/20 blur-2xl" />
-
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl mb-2">Chat</h1>
-            <p className="text-indigo-100 max-w-xl text-lg">
-              Communicate with your team members in real-time.
-            </p>
-          </div>
-
+      <PageHeader
+        title="Chat"
+        description="Communicate with your team members in real-time."
+        icon={MessageSquare}
+        action={
           <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="lg" className="shadow-lg bg-white text-indigo-600 hover:bg-indigo-50 border-none">
+              <Button size="lg" className="bg-white text-slate-900 hover:bg-slate-100 border-none shadow-lg">
                 <Users className="mr-2 h-5 w-5" />
                 New Group
               </Button>
@@ -482,10 +473,10 @@ export default function ChatPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
-      </motion.div>
+        }
+      />
 
-      <div className="flex flex-1 overflow-hidden rounded-3xl border border-white/20 shadow-2xl bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl ring-1 ring-white/10">
+      <div className="flex flex-1 overflow-hidden rounded-3xl border border-slate-200/70 dark:border-white/20 shadow-2xl bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl ring-1 ring-white/10">
         {/* Sidebar - hide on smaller screens */}
         <div className="w-80 border-r border-white/10 max-h-full overflow-hidden flex-shrink-0 hidden md:block bg-white/20 dark:bg-slate-900/20">
           <div className="p-4 border-b">
@@ -501,10 +492,17 @@ export default function ChatPage() {
           </div>
 
           <Tabs defaultValue="direct" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="direct">Direct</TabsTrigger>
-              <TabsTrigger value="groups">Groups</TabsTrigger>
-            </TabsList>
+            <div className="px-4 pt-4">
+              <AnimatedTabs
+                tabs={[
+                  { value: "direct", label: "Direct" },
+                  { value: "groups", label: "Groups" }
+                ]}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                layoutId="chatTab"
+              />
+            </div>
             <TabsContent value="direct" className="mt-0">
               <div className="flex items-center justify-between p-2">
                 <p className="text-sm font-medium">Contacts</p>

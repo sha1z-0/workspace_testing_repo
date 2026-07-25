@@ -8,9 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { projectsAPI, usersAPI } from "@/lib/api"
 import type { FirebaseProject } from "@/lib/firebase-types"
 import { useEffect, useState } from "react"
-import { Loader2, Plus, Search, Filter, Calendar, Users, BarChart } from "lucide-react"
+import { Loader2, Plus, Search, Filter, Calendar, Users, BarChart, Briefcase } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { PageHeader } from "@/components/ui/page-header"
+import { AnimatedTabs } from "@/components/ui/animated-tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
@@ -27,7 +29,7 @@ export default function ProjectsPage() {
   const [isAddingProject, setIsAddingProject] = useState(false)
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
   const [teamMembers, setTeamMembers] = useState<string[]>([])
-  
+
   const [newProject, setNewProject] = useState({
     name: "",
     description: "",
@@ -36,19 +38,19 @@ export default function ProjectsPage() {
     leadId: "",
   })
 
-    const fetchData = async () => {
-      if (user) {
-        try {
-          const [projectsData, usersData] = await Promise.all([projectsAPI.getAll(), usersAPI.getAll()])
-          setProjects(projectsData)
-          setUsers(usersData)
-        } catch (error) {
-          console.error("Error fetching data:", error)
-        } finally {
-          setLoading(false)
-        }
+  const fetchData = async () => {
+    if (user) {
+      try {
+        const [projectsData, usersData] = await Promise.all([projectsAPI.getAll(), usersAPI.getAll()])
+        setProjects(projectsData)
+        setUsers(usersData)
+      } catch (error) {
+        console.error("Error fetching data:", error)
+      } finally {
+        setLoading(false)
       }
     }
+  }
 
   useEffect(() => {
     fetchData()
@@ -57,10 +59,10 @@ export default function ProjectsPage() {
 
   const handleCreateProject = async () => {
     if (!user) return;
-    
+
     try {
       setIsAddingProject(true);
-      
+
       const lead = users.find(u => u.uid === (newProject.leadId || user.id));
       await projectsAPI.createProject({
         name: newProject.name,
@@ -74,7 +76,7 @@ export default function ProjectsPage() {
         team_members: teamMembers.length > 0 ? teamMembers : [user.id],
         created_by: user.id
       });
-      
+
       // Reset form
       setNewProject({
         name: "",
@@ -84,16 +86,16 @@ export default function ProjectsPage() {
         leadId: "",
       });
       setTeamMembers([]);
-      
+
       toast({
         title: "Project created",
         description: "Your new project has been created successfully.",
       });
-      
+
       // Refresh projects list
       await fetchData();
       setIsProjectDialogOpen(false);
-      
+
     } catch (error) {
       console.error("Error creating project:", error);
       toast({
@@ -138,7 +140,7 @@ export default function ProjectsPage() {
 
   const getInitials = (name: string | undefined) => {
     if (!name) return "?";
-    
+
     return name
       .split(" ")
       .map((n) => n[0])
@@ -156,18 +158,18 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-        <div>
-          <h2 className="text-2xl font-bold">Projects</h2>
-          <p className="text-muted-foreground">Manage your projects and track progress</p>
-        </div>
-        <Dialog open={isProjectDialogOpen} onOpenChange={setIsProjectDialogOpen}>
-          <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          New Project
-        </Button>
-          </DialogTrigger>
+      <PageHeader
+        title="Projects"
+        description="Manage your projects and track progress"
+        icon={Briefcase}
+        action={
+          <Dialog open={isProjectDialogOpen} onOpenChange={setIsProjectDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-white text-slate-900 hover:bg-slate-100 border-none shadow-lg">
+                <Plus className="mr-2 h-4 w-4" />
+                New Project
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create New Project</DialogTitle>
@@ -178,28 +180,28 @@ export default function ProjectsPage() {
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="name">Project Name</Label>
-                <Input 
+                <Input
                   id="name"
                   value={newProject.name}
-                  onChange={(e) => setNewProject({...newProject, name: e.target.value})}
+                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
                   placeholder="Enter project name"
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="description">Description</Label>
-                <Textarea 
+                <Textarea
                   id="description"
                   value={newProject.description}
-                  onChange={(e) => setNewProject({...newProject, description: e.target.value})}
+                  onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
                   placeholder="Enter project description"
                   rows={3}
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="status">Status</Label>
-                <Select 
+                <Select
                   value={newProject.status}
-                  onValueChange={(value) => setNewProject({...newProject, status: value})}
+                  onValueChange={(value) => setNewProject({ ...newProject, status: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
@@ -215,9 +217,9 @@ export default function ProjectsPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="lead">Project Lead</Label>
-                <Select 
+                <Select
                   value={newProject.leadId}
-                  onValueChange={(value) => setNewProject({...newProject, leadId: value})}
+                  onValueChange={(value) => setNewProject({ ...newProject, leadId: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select project lead" />
@@ -232,7 +234,7 @@ export default function ProjectsPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="teamMembers">Team Members</Label>
-                <Select 
+                <Select
                   onValueChange={(value) => {
                     if (!teamMembers.includes(value)) {
                       setTeamMembers([...teamMembers, value]);
@@ -280,7 +282,7 @@ export default function ProjectsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button 
+              <Button
                 onClick={handleCreateProject}
                 disabled={!newProject.name || !newProject.description || isAddingProject}
               >
@@ -299,7 +301,8 @@ export default function ProjectsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+        }
+      />
 
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-x-4 md:space-y-0">
         <div className="relative flex-1">
@@ -341,7 +344,7 @@ export default function ProjectsPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredProjects.map((project) => (
-            <Card key={project.id} className="flex flex-col">
+            <Card key={project.id} className="flex flex-col border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg transition-all duration-300 hover:border-slate-500/50 hover:shadow-[0_0_15px_rgba(100,116,139,0.2)]">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <Badge className={`${getStatusColor(project.status)} text-white`}>
