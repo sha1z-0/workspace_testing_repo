@@ -285,8 +285,8 @@ export default function CEOAdminDashboard() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
+        }
+      />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <div>
