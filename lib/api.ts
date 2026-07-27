@@ -1963,7 +1963,6 @@ export const calendarEventsAPI = {
           location: event.location,
           event_type: event.type,
           organizer_id: event.organizerId,
-          created_by: event.organizerId,
           organizer_name: event.organizerName || null,
           organizer_email: event.organizerEmail || null,
           attendees: event.attendees || [],

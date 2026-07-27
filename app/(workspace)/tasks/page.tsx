@@ -592,6 +592,10 @@ export default function TasksPage() {
   // --- Assigner: Review Progress ---
   const handleAssignerReviewProgress = async () => {
     if (!assignerReviewTask) return
+    if (assignerReviewTask.isPhased) {
+      toast({ title: "Milestone Task", description: "Please approve or reject individual milestones to update milestone progress.", variant: "destructive" })
+      return
+    }
     try {
       setIsUpdatingTask(true)
       let reviewerFile: { url: string; name: string; size: number } | undefined
@@ -642,12 +646,14 @@ export default function TasksPage() {
   }
 
   const openReviewDialog = async (taskId: string) => {
-    setReviewTaskId(taskId); setReviewType("progress"); setReviewNotes(""); setReviewFile(null)
+    setReviewTaskId(taskId); setReviewNotes(""); setReviewFile(null)
     const task = tasks.find(t => t.id === taskId)
     if (task?.isPhased) {
       const allApproved = await tasksAPI.allMilestonesApproved(taskId)
       if (!allApproved) setReviewType("completion-gated")
       else setReviewType("completion")
+    } else {
+      setReviewType("progress")
     }
     setReviewDialogOpen(true)
   }
@@ -1260,7 +1266,7 @@ export default function TasksPage() {
                 {detailTask.status === "todo" && isAssignee(detailTask) && !detailTask.isPhased && (
                   <TaskButton onClick={() => handleStartTask(detailTask.id)}><Play className="h-4 w-4" />Start Task</TaskButton>
                 )}
-                {detailTask.status === "pending_review" && isAssigner(detailTask) && (
+                {detailTask.status === "pending_review" && isAssigner(detailTask) && !detailTask.isPhased && (
                   <TaskButton variant="primary-amber" onClick={() => { setAssignerReviewTask(detailTask); setAssignerProgress(detailTask.progress); setAssignerNotes(""); setAssignerFile(null); setAssignerAction("review"); setAssignerReviewOpen(true); setDetailDialogOpen(false) }}><MessageSquare className="h-4 w-4" />Review Progress</TaskButton>
                 )}
                 {detailTask.status === "pending_completion_review" && isAssigner(detailTask) && (
@@ -1441,42 +1447,58 @@ export default function TasksPage() {
       {/* ===== SUBMIT FOR REVIEW MODAL ===== */}
       <Dialog open={reviewDialogOpen} onOpenChange={(open) => { if (!open) { setReviewDialogOpen(false); setReviewFile(null); setReviewNotes("") } }}>
         <DialogContent className="sm:max-w-[480px] bg-[#121826] border-white/[0.06] text-[#F1F5F9] rounded-[14px]">
-          <DialogHeader>
-            <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">Submit for Review</DialogTitle>
-            <DialogDescription className="text-[13px] text-[#64748B]">Choose the type of review to send to the assigner.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Review type selector */}
-            <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => setReviewType("progress")} className={`p-4 rounded-[12px] border-2 text-left transition-all ${reviewType === "progress" ? "border-[#3B82F6] bg-[#3B82F6]/[0.06]" : "border-white/[0.06] hover:border-white/[0.10]"}`}>
-                <MessageSquare className={`h-5 w-5 mb-2 ${reviewType === "progress" ? "text-[#93C5FD]" : "text-[#64748B]"}`} />
-                <p className={`text-[13px] font-semibold ${reviewType === "progress" ? "text-[#93C5FD]" : "text-[#CBD5E1]"}`}>Progress Update</p>
-                <p className="text-[12px] text-[#64748B] mt-1">Share what's done, attach files optionally</p>
-              </button>
-              <button type="button" onClick={() => { if (reviewType !== "completion-gated") setReviewType("completion") }} className={`p-4 rounded-[12px] border-2 text-left transition-all ${reviewType === "completion" ? "border-[#8B5CF6] bg-[#8B5CF6]/[0.06]" : reviewType === "completion-gated" ? "border-white/[0.06] bg-[#121826]/50 opacity-50 cursor-not-allowed" : "border-white/[0.06] hover:border-white/[0.10]"}`}>
-                {reviewType === "completion-gated" ? <Lock className="h-5 w-5 mb-2 text-[#64748B]" /> : <CheckCircle className={`h-5 w-5 mb-2 ${reviewType === "completion" ? "text-[#C4B5FD]" : "text-[#64748B]"}`} />}
-                <p className={`text-[13px] font-semibold ${reviewType === "completion" ? "text-[#C4B5FD]" : "text-[#CBD5E1]"}`}>Completion Review</p>
-                <p className="text-[12px] text-[#64748B] mt-1">{reviewType === "completion-gated" ? "Complete all milestones first" : "Task is done, file attachment required"}</p>
-              </button>
-            </div>
+          {(() => {
+            const isPhasedTask = tasks.find(t => t.id === reviewTaskId)?.isPhased
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">
+                    {isPhasedTask ? "Submit Task for Completion" : "Submit for Review"}
+                  </DialogTitle>
+                  <DialogDescription className="text-[13px] text-[#64748B]">
+                    {isPhasedTask ? "All milestones are approved. Attach your final deliverable document." : "Choose the type of review to send to the assigner."}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {!isPhasedTask && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <button type="button" onClick={() => setReviewType("progress")} className={`p-4 rounded-[12px] border-2 text-left transition-all ${reviewType === "progress" ? "border-[#3B82F6] bg-[#3B82F6]/[0.06]" : "border-white/[0.06] hover:border-white/[0.10]"}`}>
+                        <MessageSquare className={`h-5 w-5 mb-2 ${reviewType === "progress" ? "text-[#93C5FD]" : "text-[#64748B]"}`} />
+                        <p className={`text-[13px] font-semibold ${reviewType === "progress" ? "text-[#93C5FD]" : "text-[#CBD5E1]"}`}>Progress Update</p>
+                        <p className="text-[12px] text-[#64748B] mt-1">Share what's done, attach files optionally</p>
+                      </button>
+                      <button type="button" onClick={() => { if (reviewType !== "completion-gated") setReviewType("completion") }} className={`p-4 rounded-[12px] border-2 text-left transition-all ${reviewType === "completion" ? "border-[#8B5CF6] bg-[#8B5CF6]/[0.06]" : reviewType === "completion-gated" ? "border-white/[0.06] bg-[#121826]/50 opacity-50 cursor-not-allowed" : "border-white/[0.06] hover:border-white/[0.10]"}`}>
+                        {reviewType === "completion-gated" ? <Lock className="h-5 w-5 mb-2 text-[#64748B]" /> : <CheckCircle className={`h-5 w-5 mb-2 ${reviewType === "completion" ? "text-[#C4B5FD]" : "text-[#64748B]"}`} />}
+                        <p className={`text-[13px] font-semibold ${reviewType === "completion" ? "text-[#C4B5FD]" : "text-[#CBD5E1]"}`}>Completion Review</p>
+                        <p className="text-[12px] text-[#64748B] mt-1">{reviewType === "completion-gated" ? "Complete all milestones first" : "Task is done, file attachment required"}</p>
+                      </button>
+                    </div>
+                  )}
 
-            <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">{reviewType === "progress" ? "Progress Notes" : "Notes (optional)"}</Label><Textarea value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} placeholder={reviewType === "progress" ? "What's done, what's left to do..." : "Any notes for the assigner..."} rows={3} className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px] text-[14px]" /></div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-[13px] text-[#CBD5E1]">
+                      {isPhasedTask || reviewType === "completion" ? "Notes (optional)" : "Progress Notes"}
+                    </Label>
+                    <Textarea value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} placeholder={isPhasedTask || reviewType === "completion" ? "Any notes for the assigner..." : "What's done, what's left to do..."} rows={3} className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px] text-[14px]" />
+                  </div>
 
-            {reviewType === "progress" && (
-              <FileDropZone tint="blue" file={reviewFile} onChange={setReviewFile} />
-            )}
-            {reviewType === "completion" && (
-              <FileDropZone tint="purple" required file={reviewFile} onChange={setReviewFile} />
-            )}
-          </div>
-          <DialogFooter className="gap-2 mt-2">
-            <TaskButton variant="secondary" onClick={() => setReviewDialogOpen(false)}>Cancel</TaskButton>
-            {reviewType === "progress" ? (
-              <TaskButton onClick={handleSubmitProgressReview} disabled={!reviewNotes.trim() || isReviewSubmitting}>{isReviewSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Submit Progress Update</TaskButton>
-            ) : (
-              <TaskButton variant="primary-purple" onClick={handleSubmitCompletionReview} disabled={!reviewFile || isReviewSubmitting}>{isReviewSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}Submit for Completion</TaskButton>
-            )}
-          </DialogFooter>
+                  {(isPhasedTask || reviewType === "completion") ? (
+                    <FileDropZone tint="purple" required file={reviewFile} onChange={setReviewFile} />
+                  ) : (
+                    <FileDropZone tint="blue" file={reviewFile} onChange={setReviewFile} />
+                  )}
+                </div>
+                <DialogFooter className="gap-2 mt-2">
+                  <TaskButton variant="secondary" onClick={() => setReviewDialogOpen(false)}>Cancel</TaskButton>
+                  {(isPhasedTask || reviewType === "completion") ? (
+                    <TaskButton variant="primary-purple" onClick={handleSubmitCompletionReview} disabled={!reviewFile || isReviewSubmitting}>{isReviewSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}Submit for Completion</TaskButton>
+                  ) : (
+                    <TaskButton onClick={handleSubmitProgressReview} disabled={!reviewNotes.trim() || isReviewSubmitting}>{isReviewSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Submit Progress Update</TaskButton>
+                  )}
+                </DialogFooter>
+              </>
+            )
+          })()}
         </DialogContent>
       </Dialog>
 

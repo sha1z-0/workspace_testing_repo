@@ -201,6 +201,7 @@ export default function CalendarPage() {
   const [creatingEvent, setCreatingEvent] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [eventDetailsOpen, setEventDetailsOpen] = useState(false)
+  const [isDeletingEvent, setIsDeletingEvent] = useState(false)
 
   // Event/meeting form state
   const [eventType, setEventType] = useState<"event" | "meeting">("event")
@@ -415,24 +416,50 @@ export default function CalendarPage() {
       return
     }
 
-    // Past datetime check
+    // Past datetime & end-time validation check
     const [startHours, startMinutes] = startTime.split(':').map(Number)
     const [endHours, endMinutes] = endTime.split(':').map(Number)
 
     const startDateTimeCheck = new Date(selectedDate!)
     startDateTimeCheck.setHours(startHours, startMinutes, 0, 0)
 
-    if (startDateTimeCheck.getTime() < Date.now()) {
+    const endDateTimeCheck = new Date(selectedDate!)
+    endDateTimeCheck.setHours(endHours, endMinutes, 0, 0)
+
+    const now = Date.now()
+
+    if (startDateTimeCheck.getTime() < now) {
       setPastDatetimeError(true)
       toast({
         title: "Invalid Schedule",
-        description: "Cannot schedule events in the past.",
+        description: "Start time cannot be in the past.",
         variant: "destructive",
       })
       return
-    } else {
-      setPastDatetimeError(false)
     }
+
+    if (endDateTimeCheck.getTime() < now) {
+      setPastDatetimeError(true)
+      toast({
+        title: "Invalid Schedule",
+        description: "End time cannot be in the past.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (endDateTimeCheck.getTime() <= startDateTimeCheck.getTime()) {
+      setEndTimeError(true)
+      toast({
+        title: "Invalid Time Range",
+        description: "End time must be after start time.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setPastDatetimeError(false)
+    setEndTimeError(false)
 
     try {
       setCreatingEvent(true)
@@ -571,34 +598,52 @@ export default function CalendarPage() {
         newEvent.id = id;
 
         if (addToGoogleCalendar) {
-          await googleCalendarService.addEvent({
-            title,
-            description,
-            startTime: startDate,
-            endTime: endDate,
-            location,
-            attendees: [],
-          });
+          try {
+            await googleCalendarService.addEvent({
+              title,
+              description,
+              startTime: startDate,
+              endTime: endDate,
+              location,
+              attendees: [],
+            });
+          } catch (gErr) {
+            console.error("Failed to add event to Google Calendar:", gErr);
+            toast({
+              title: "Google Calendar Warning",
+              description: "Event created, but failed to sync to Google Calendar.",
+              variant: "destructive",
+            });
+          }
         }
 
         // Send notifications to invited members even for regular events
         if (invitedMembers.length > 0) {
-          const invitedMembersEmails = invitedMembers
-            .map(userId => allUsers.find(u => u.uid === userId)?.email)
-            .filter(Boolean) as string[];
+          try {
+            const invitedMembersEmails = invitedMembers
+              .map(userId => allUsers.find(u => u.uid === userId)?.email)
+              .filter(Boolean) as string[];
 
-          if (invitedMembersEmails.length > 0) {
-            await dashboardService.notifyUsers(invitedMembersEmails, {
-              title: `Event Invitation: ${title}`,
-              content: `${user?.name || 'Someone'} has invited you to an event: ${title} on ${format(startDate, 'PPP')} at ${format(startDate, 'p')}`,
-              type: "event",
-              linkTo: `/calendar?event=${id}`,
-              eventId: id,
-            });
+            if (invitedMembersEmails.length > 0) {
+              await dashboardService.notifyUsers(invitedMembersEmails, {
+                title: `Event Invitation: ${title}`,
+                content: `${user?.name || 'Someone'} has invited you to an event: ${title} on ${format(startDate, 'PPP')} at ${format(startDate, 'p')}`,
+                type: "event",
+                linkTo: `/calendar?event=${id}`,
+                eventId: id,
+              });
 
+              toast({
+                title: "Notifications sent",
+                description: `${invitedMembersEmails.length} team member(s) notified`,
+              });
+            }
+          } catch (nErr) {
+            console.error("Failed to send member notifications:", nErr);
             toast({
-              title: "Notifications sent",
-              description: `${invitedMembersEmails.length} team member(s) notified`,
+              title: "Notification Warning",
+              description: "Event created, but failed to send notifications to some members.",
+              variant: "destructive",
             });
           }
         }
@@ -625,6 +670,32 @@ export default function CalendarPage() {
       })
     } finally {
       setCreatingEvent(false)
+    }
+  }
+
+  const handleDeleteEvent = async () => {
+    if (!selectedEvent) return
+    try {
+      setIsDeletingEvent(true)
+      const { calendarEventsAPI } = await import('@/lib/api')
+      await calendarEventsAPI.deleteEvent(selectedEvent.id)
+
+      setEvents(prev => prev.filter(e => e.id !== selectedEvent.id))
+      setEventDetailsOpen(false)
+      setSelectedEvent(null)
+      toast({
+        title: "Event deleted",
+        description: "The event has been successfully deleted.",
+      })
+    } catch (error: any) {
+      console.error("Error deleting event:", error)
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to delete event.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeletingEvent(false)
     }
   }
 
@@ -1057,6 +1128,11 @@ export default function CalendarPage() {
                       mode="single"
                       selected={selectedDate}
                       onSelect={setSelectedDate}
+                      disabled={(d) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        return d < today;
+                      }}
                       initialFocus
                     />
                   </PopoverContent>
@@ -1318,7 +1394,7 @@ export default function CalendarPage() {
                   }
                 </div>
                 <div className="z-10 text-center text-white px-6">
-                  <h2 className="text-2xl font-bold">{selectedEvent.title}</h2>
+                  <DialogTitle className="text-2xl font-bold text-white">{selectedEvent.title}</DialogTitle>
                   <div className="flex justify-center items-center gap-2 mt-2 text-white/80 text-sm">
                     <span className="bg-white/20 px-2 py-0.5 rounded-md backdrop-blur-sm">
                       {selectedEvent.type === "meeting" ? "Meeting" : "Event"}
@@ -1394,7 +1470,13 @@ export default function CalendarPage() {
                     Close
                   </Button>
                   {(user?.role === "CEO" || user?.role === "C_LEVEL" || user?.role === "LEAD" || selectedEvent.organizer === user?.name) && (
-                    <Button variant="destructive" className="flex-1 rounded-xl">
+                    <Button
+                      variant="destructive"
+                      onClick={handleDeleteEvent}
+                      disabled={isDeletingEvent}
+                      className="flex-1 rounded-xl"
+                    >
+                      {isDeletingEvent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                       Delete
                     </Button>
                   )}

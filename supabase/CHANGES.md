@@ -1,5 +1,93 @@
 # Changes Log — Finova Workspace
 
+## [2026-07-27] Calendar — Event Details Delete Button Binding & Handler
+### Status: Completed
+### Problem Solved
+1. The "Delete" button in the Event Details modal (`app/(workspace)/calendar/page.tsx`) was not working when clicked because it lacked an `onClick` event listener.
+
+### Actual Changes Made
+- **Delete Handler Implementation**: Added `handleDeleteEvent` in `app/(workspace)/calendar/page.tsx` calling `calendarEventsAPI.deleteEvent(selectedEvent.id)` in Supabase.
+- **State & UI Binding**: Bound `onClick={handleDeleteEvent}` and `disabled={isDeletingEvent}` to the Delete button, added a loading spinner (`Loader2`), removed deleted events from local `events` state, closed the modal, and displayed a success toast notification.
+
+### Files Touched
+- `app/(workspace)/calendar/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-27] Calendar — Past Date/Time & End-Time Range Validation
+### Status: Completed
+### Problem Solved
+1. Users were able to select an ending time or starting time in the past when creating events.
+2. Users were able to select end times that occurred before or at the start time.
+
+### Actual Changes Made
+- **Past Date Picker Restriction**: Updated `<Calendar>` component in `app/(workspace)/calendar/page.tsx` date picker popover to disable all dates prior to today's date (`d < today`).
+- **Start Time Past Validation**: Added strict validation in `handleCreateEvent` ensuring start time cannot be in the past (`startDateTimeCheck.getTime() < now`).
+- **End Time Past Validation**: Added strict validation ensuring end time cannot be in the past (`endDateTimeCheck.getTime() < now`).
+- **End Time Range Validation**: Enforced that end time must be strictly after start time (`endDateTimeCheck.getTime() <= startDateTimeCheck.getTime()`), displaying a descriptive error toast if invalid.
+
+### Files Touched
+- `app/(workspace)/calendar/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-27] Calendar — DialogTitle Radix UI Accessibility Compliance
+### Status: Completed
+### Problem Solved
+1. Next.js / Radix UI emitted a console error: `` `DialogContent` requires a `DialogTitle` for the component to be accessible for screen reader users `` on the Event Details modal in `app/(workspace)/calendar/page.tsx`.
+
+### Actual Changes Made
+- **Accessibility Fix**: Replaced standard `<h2>` tag in the Event Details modal header (`app/(workspace)/calendar/page.tsx`) with `<DialogTitle className="text-2xl font-bold text-white">`, satisfying Radix UI accessibility requirements and eliminating the console error.
+
+### Files Touched
+- `app/(workspace)/calendar/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-27] Calendar — Calendar Event Creation & Resilient Integration Error Handling
+### Status: Completed
+### Problem Solved
+1. Schedule Event failed to insert into Supabase due to a schema mismatch (`created_by` column does not exist on `calendar_events` table).
+2. When secondary integrations (Google Calendar sync or dashboard notifications) failed or threw network errors, event creation aborted completely without adding the event to the UI or closing the dialog.
+
+### Actual Changes Made
+- **API Payload Fix**: Removed invalid `created_by` property from `calendarEventsAPI.createEvent` in `lib/api.ts` to align with `calendar_events` table schema.
+- **Resilient Integrations**: Wrapped Google Calendar sync and member notification dispatching in independent `try...catch` blocks in `app/(workspace)/calendar/page.tsx` for regular events. If an integration fails, a descriptive warning toast is displayed while the event is still successfully created, rendered on the calendar grid, and saved to the database.
+- **Strict Date Validation**: Retained strict mandatory date picker validation (`selectedDate` required before creation).
+- **Meetings Untouched**: Kept the Schedule Meeting pipeline completely intact and unchanged.
+
+### Files Touched
+- `lib/api.ts`
+- `app/(workspace)/calendar/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-27] Tasks & Milestones — Direct Completion Review for Milestone Tasks
+### Status: Completed
+### Problem Solved
+1. When all milestones were completed on a milestone task, clicking "Submit for Review" presented a modal with 2 options ("Progress Update" and "Completion Review").
+2. The "Progress Update" option was unwanted for milestone tasks since all milestones were already approved and only the final completion submission is relevant.
+
+### Actual Changes Made
+- **Direct Completion Review**: Updated `app/(workspace)/tasks/page.tsx` so that when an employee clicks "Submit for Review" on a completed milestone task, it hides the 2-card selector and opens directly to the **Completion Review** form (requiring final document attachment).
+- **Standalone Tasks Untouched**: Normal (standalone) tasks continue to display both "Progress Update" and "Completion Review" options in the modal without any alteration.
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-27] Tasks & Milestones — Milestone Review vs. Standalone Progress Review Isolation
+### Status: Completed
+### Problem Solved
+1. When a milestone was submitted for review, the overall task status became `pending_review`.
+2. In the *View Details Modal*, the Assigner/Chief was presented with a generic **"Review Progress"** manual slider button, which updated the task's progress percentage and set status back to `in_progress` without approving/rejecting the specific milestone.
+3. This left the milestone unapproved, preventing the employee from starting/submitting subsequent milestones or completing the task workflow.
+
+### Actual Changes Made
+- **Standalone vs. Milestone Isolation**: Gated the **"Review Progress"** button in `app/(workspace)/tasks/page.tsx` so it only renders for standalone tasks (`!detailTask.isPhased`).
+- **Milestone Workflow Protection**: Added a safeguard in `handleAssignerReviewProgress` to block setting arbitrary task progress percentages on phased tasks.
+- **Workflow Integrity Preserved**: Standalone (normal) tasks remain 100% untouched and continue to use the Review Progress slider as intended.
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+
 ## [2026-07-27] Tasks & Milestones — Deadline Enforcement & Late Submission Unlock
 ### Status: Completed
 ### Problem Solved
