@@ -1,5 +1,24 @@
 # Changes Log — Finova Workspace
 
+## [2026-07-27] Tasks & Milestones — Deadline Enforcement & Late Submission Unlock
+### Status: Completed
+### Problem Solved
+1. Employees were able to submit tasks and milestones even after the deadline (due date/time) had passed.
+2. Assigners and C-Level users had no toggle button to manually allow or lock late task/milestone submissions.
+
+### Actual Changes Made
+- **Database Schema**: Created `components/migrations/014-allow-late-submission.sql` adding `allow_late_submission` boolean flag (default `false`) to `tasks` and `task_milestones` tables.
+- **API Extensions**: Updated `lib/api.ts` to map `allowLateSubmission` for tasks and milestones, and added `toggleLateSubmissionTask(id, allow)` and `toggleLateSubmissionMilestone(id, allow)` API endpoints.
+- **Deadline Validation**: Implemented `isPastDeadline()` helper in `app/(workspace)/tasks/page.tsx` comparing local/UTC time against task and milestone due dates.
+- **Employee Submission Locking**: Automatically disabled and locked the "Submit for Review" button (with `<Lock />` icon) for tasks and milestones when the deadline is past and late submission is not allowed.
+- **Assigner/C-Level Override Toggle**: Added "Allow Submission" toggle button on standalone task cards and milestone stepper items in the View Details modal for Assigners and C-Level users, keeping layout heights consistent.
+
+### Files Touched
+- `components/migrations/014-allow-late-submission.sql`
+- `lib/api.ts`
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+
 ## [2026-07-25] UI/UX — Comprehensive Light Mode & Design Standardization Pass
 ### Status: Completed
 ### Root Cause

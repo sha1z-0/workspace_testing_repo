@@ -559,6 +559,7 @@ export const tasksAPI = {
         reviewAssignerFileName: task.review_assigner_file_name,
         reviewAssignerFileSize: task.review_assigner_file_size,
         isPhased: task.is_phased,
+        allowLateSubmission: (task as any).allow_late_submission,
         createdAt: task.created_at,
         updatedAt: task.updated_at
       }))
@@ -632,6 +633,7 @@ export const tasksAPI = {
         reviewAssignerFileName: task.review_assigner_file_name,
         reviewAssignerFileSize: task.review_assigner_file_size,
         isPhased: task.is_phased,
+        allowLateSubmission: (task as any).allow_late_submission,
         notified: task.notified,
         createdAt: task.created_at,
         updatedAt: task.updated_at
@@ -957,6 +959,47 @@ export const tasksAPI = {
       return data
     } catch (error) {
       console.error("Error toggling milestone submission:", error)
+      throw error
+    }
+  },
+
+  
+  toggleLateSubmissionTask: async (id: string, allow: boolean) => {
+    try {
+      const { data, error } = await supabase
+        .from("tasks")
+        .update({
+          allow_late_submission: allow,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error("Error toggling late submission:", error)
+      throw error
+    }
+  },
+
+  toggleLateSubmissionMilestone: async (id: string, allow: boolean) => {
+    try {
+      const { data, error } = await supabase
+        .from("task_milestones")
+        .update({
+          allow_late_submission: allow,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error("Error toggling milestone late submission:", error)
       throw error
     }
   },

@@ -205,7 +205,8 @@ export default function TasksPage() {
         setMilestones(m); 
         await fetchTasks();
         // Update the detailTask to reflect status changes (e.g., if it moved to completed)
-        const updated = await tasksAPI.getTaskById(detailTask.id);
+        const freshTasks = await tasksAPI.getUserTasks(user!.id, user!.role);
+        const updated = freshTasks.find((t: any) => t.id === detailTask.id);
         if (updated) setDetailTask(updated);
       }
       setMilestoneDialogOpen(false); setMilestoneComment(""); setMilestoneFile(null)
@@ -247,6 +248,32 @@ export default function TasksPage() {
       toast({ title: "Error", description: "Failed to open milestone.", variant: "destructive" })
     }
   }
+
+  const isPastDeadline = (dateStr?: string | null) => {
+    if (!dateStr) return false;
+    return new Date(dateStr).getTime() < Date.now();
+  };
+
+  const handleToggleLateSubmission = async (id: string, allow: boolean, isMilestone: boolean) => {
+    try {
+      if (isMilestone) {
+        await tasksAPI.toggleLateSubmissionMilestone(id, allow);
+        if (detailTask) {
+          const m = await tasksAPI.getTaskMilestones(detailTask.id);
+          setMilestones(m);
+        }
+      } else {
+        await tasksAPI.toggleLateSubmissionTask(id, allow);
+        await fetchTasks();
+        if (detailTask && detailTask.id === id) {
+          refreshDetailTask();
+        }
+      }
+      toast({ title: allow ? "Submission Unlocked" : "Submission Locked" });
+    } catch (error: any) {
+      toast({ title: "Error", description: error?.message, variant: "destructive" });
+    }
+  };
 
   const handleToggleMilestoneSubmission = async (milestoneId: string, currentOpen: boolean) => {
     try {
@@ -987,10 +1014,13 @@ export default function TasksPage() {
                 <p className="text-[13px] text-slate-500 dark:text-[#475569] mt-1">{searchQuery ? "Try adjusting your search" : "Create a new task to get started"}</p>
               </div>
             ) : getTasksByStatus(activeTab).map((task) => {
-              const canSubmit = isAssignee(task) && task.status === "in_progress"
               const isPhased = task.isPhased
               const summary = milestoneSummaries[task.id]
               const allMilestonesDone = isPhased && summary && summary.approved === summary.total && summary.total > 0
+
+              const pastDue = task.dueDatetime ? isPastDeadline(task.dueDatetime) : false
+              const isLocked = pastDue && !task.allowLateSubmission
+              const canSubmit = isAssignee(task) && task.status === "in_progress"
 
               return (
                 <motion.div key={task.id} layout whileHover={{ y: -2 }} className="group h-full">
@@ -1037,14 +1067,24 @@ export default function TasksPage() {
                     <div className="mt-auto pt-3 border-t border-white/[0.04]">
                       <div className="flex flex-wrap items-center gap-2">
                         <TaskButton variant="secondary" onClick={() => { setDetailTask(task); setDetailDialogOpen(true) }}><Eye className="h-3.5 w-3.5" />View Details</TaskButton>
-                        {canInteractWithTask(task) && isAssignee(task) && (
+                        {canInteractWithTask(task) && isAssignee(task) && task.status === "in_progress" && (
                           isPhased
-                            ? (allMilestonesDone && task.status === "in_progress" && (
-                                <TaskButton variant="primary" onClick={() => openReviewDialog(task.id)} className="whitespace-nowrap"><Send className="h-3.5 w-3.5" />Submit for Review</TaskButton>
+                            ? (allMilestonesDone && (
+                                <TaskButton variant="primary" onClick={() => openReviewDialog(task.id)} disabled={isLocked} className="whitespace-nowrap">{isLocked ? <Lock className="h-3.5 w-3.5 mr-1" /> : <Send className="h-3.5 w-3.5" />}Submit for Review</TaskButton>
                               ))
-                            : (canSubmit && (
-                                <TaskButton variant="primary" onClick={() => openReviewDialog(task.id)} className="whitespace-nowrap"><Send className="h-3.5 w-3.5" />Submit for Review</TaskButton>
-                              ))
+                            : (
+                                <TaskButton variant="primary" onClick={() => openReviewDialog(task.id)} disabled={isLocked} className="whitespace-nowrap">{isLocked ? <Lock className="h-3.5 w-3.5 mr-1" /> : <Send className="h-3.5 w-3.5" />}Submit for Review</TaskButton>
+                              )
+                        )}
+                        {canInteractWithTask(task) && isAssigner(task) && pastDue && !isPhased && (
+                          <TaskButton 
+                            variant={task.allowLateSubmission ? "primary" : "secondary"} 
+                            onClick={() => handleToggleLateSubmission(task.id, !task.allowLateSubmission, false)} 
+                            className="whitespace-nowrap"
+                          >
+                            {task.allowLateSubmission ? <Unlock className="h-3.5 w-3.5 mr-1" /> : <Lock className="h-3.5 w-3.5 mr-1" />}
+                            {task.allowLateSubmission ? "Late Submission Allowed" : "Allow Submission"}
+                          </TaskButton>
                         )}
                         {canInteractWithTask(task) && isAssigner(task) && task.isPhased && task.status === "pending_review" && (
                           <div className="flex flex-wrap gap-2">
@@ -1102,7 +1142,9 @@ export default function TasksPage() {
                         const canStart = isAssign && m.status === "not_started" && isActionable
                         const canSubmit = isAssign && m.status === "in_progress" && isActionable
                         const canReview = isAssgnr && m.status === "pending_review"
-                        const submissionClosed = m.submission_open === false
+                        const mPastDue = m.dueDate ? isPastDeadline(m.dueDate) : false
+                        const submissionLocked = mPastDue && !m.allowLateSubmission
+                        const disableSubmit = submissionLocked
 
                         const rowBg = isLocked ? "bg-[#0F1523]/50 opacity-50" : isActionable ? "bg-[#3B82F6]/[0.06] border-[#3B82F6]/20" : isApproved ? "bg-[#10B981]/[0.04] border-[#10B981]/20" : "bg-[#0F1523] border-white/[0.06]"
                         return (
@@ -1114,31 +1156,31 @@ export default function TasksPage() {
                             <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 min-w-0">
                               <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold ${isApproved ? "bg-[#10B981]/20 text-[#6EE7B7]" : isActionable ? "bg-[#3B82F6]/20 text-[#93C5FD]" : "bg-white/[0.06] text-[#64748B]"}`}>
-                                {isApproved ? <CheckCircle className="h-3 w-3" /> : isLocked ? <Lock className="h-3 w-3" /> : i + 1}
+                                {isApproved ? <CheckCircle className="h-3 w-3" /> : (isLocked || submissionLocked) ? <Lock className="h-3 w-3" /> : i + 1}
                               </div>
                               <span className="truncate text-[13px] text-[#CBD5E1]">{m.title}</span>
                               <MilestoneStatusBadge status={m.status} />
-                              {m.due_datetime && (
-                                <span className="text-[11px] text-[#64748B]">{format(new Date(m.due_datetime), "MMM d, h:mm a")}</span>
+                              {m.dueDate && (
+                                <span className="text-[11px] text-[#64748B]">{format(new Date(m.dueDate), "MMM d, h:mm a")}</span>
                               )}
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                              {/* Assigner toggle for submission_open */}
-                              {isAssgnr && (m.status === "in_progress" || m.status === "pending_review") && (m.due_datetime ? new Date(m.due_datetime).getTime() < Date.now() : false) && (
+                              {/* Assigner toggle for allow_late_submission */}
+                              {isAssgnr && mPastDue && (
                                 <button
                                   type="button"
-                                  onClick={() => handleToggleMilestoneSubmission(m.id, m.submission_open !== false)}
-                                  className={`p-1.5 rounded-[8px] transition-colors ${submissionClosed ? 'text-[#FCA5A5] hover:bg-red-500/10' : 'text-[#6EE7B7] hover:bg-green-500/10'}`}
-                                  title={submissionClosed ? "Re-open submissions" : "Close submissions"}
+                                  onClick={(e) => { e.stopPropagation(); handleToggleLateSubmission(m.id, !m.allowLateSubmission, true); }}
+                                  className={`p-1.5 rounded-[8px] transition-colors ${!m.allowLateSubmission ? 'text-[#FCA5A5] hover:bg-red-500/10' : 'text-[#6EE7B7] hover:bg-green-500/10'}`}
+                                  title={!m.allowLateSubmission ? "Allow Late Submission" : "Lock Late Submission"}
                                 >
-                                  {submissionClosed ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+                                  {!m.allowLateSubmission ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
                                 </button>
                               )}
-                              {canSubmit && submissionClosed && (
-                                <TaskButtonGhost disabled className="cursor-not-allowed opacity-40"><Lock className="h-3 w-3 mr-1" />Closed</TaskButtonGhost>
+                              {canSubmit && disableSubmit && (
+                                <TaskButtonGhost disabled className="cursor-not-allowed opacity-40"><Lock className="h-3 w-3 mr-1" />Locked</TaskButtonGhost>
                               )}
-                              {canSubmit && !submissionClosed && (
-                                <TaskButtonGhost onClick={() => openMilestoneDialog(m.id, "submit")} className="text-[#93C5FD]"><Send className="h-3 w-3" />Submit</TaskButtonGhost>
+                              {canSubmit && !disableSubmit && (
+                                <TaskButtonGhost onClick={() => openMilestoneDialog(m.id, "submit")} className="text-[#93C5FD]"><Send className="h-3 w-3 mr-1" />Submit</TaskButtonGhost>
                               )}
                               {canReview && <div className="flex gap-1"><TaskButtonGhost onClick={() => openMilestoneDialog(m.id, "approve")} className="text-[#6EE7B7]"><CheckCircle className="h-3 w-3" /></TaskButtonGhost><TaskButtonGhost onClick={() => openMilestoneDialog(m.id, "reject")} className="text-[#FCA5A5]"><X className="h-3 w-3" /></TaskButtonGhost></div>}
                               {m.latestReview?.employee_file_url && (

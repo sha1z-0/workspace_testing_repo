@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finova Workspace — Changes Report July 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    @page {
+      size: A4;
+      margin: 12mm 15mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      margin: 0;
+      padding: 24px 28px 32px;
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+
+    /* ── Header Banner ── */
+    .header-banner {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1e293b 100%);
+      color: #fff;
+      padding: 26px 30px 22px;
+      border-radius: 10px;
+      margin-bottom: 26px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .header-left h1 {
+      margin: 0 0 4px 0;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #ffffff;
+    }
+
+    .header-left .subtitle {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+    }
+
+    .header-right {
+      text-align: right;
+      font-size: 11.5px;
+      color: #94a3b8;
+      line-height: 1.8;
+    }
+
+    .doc-label {
+      display: inline-block;
+      background: rgba(59,130,246,0.18);
+      border: 1px solid rgba(96,165,250,0.35);
+      color: #60a5fa;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      margin-bottom: 6px;
+    }
+
+    /* ── Section Headings ── */
+    h2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 28px 0 12px 0;
+      padding-bottom: 7px;
+      border-bottom: 1.5px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      page-break-after: avoid;
+    }
+
+    h2::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      min-width: 4px;
+      height: 18px;
+      background: #3b82f6;
+      border-radius: 3px;
+    }
+
+    h3 {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #334155;
+      margin: 0 0 7px 0;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin: 0 0 10px 0;
+      color: #475569;
+    }
+
+    ul {
+      margin: 4px 0 0 0;
+      padding-left: 18px;
+    }
+
+    li {
+      margin-bottom: 5px;
+      color: #475569;
+    }
+
+    li strong {
+      color: #1e293b;
+    }
+
+    code {
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      background: #e8edf5;
+      color: #0f172a;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    /* ── Change Cards ── */
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #3b82f6;
+      border-radius: 8px;
+      padding: 14px 18px 14px 16px;
+      margin-bottom: 12px;
+      page-break-inside: avoid;
+    }
+
+    .card.functional {
+      border-left-color: #8b5cf6;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 9px;
+    }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+    }
+
+    .badge-ui {
+      background: #eff6ff;
+      color: #2563eb;
+      border: 1px solid #bfdbfe;
+    }
+
+    .badge-functional {
+      background: #f5f3ff;
+      color: #7c3aed;
+      border: 1px solid #ddd6fe;
+    }
+
+    .badge-completed {
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .badge-security {
+      background: #fff7ed;
+      color: #c2410c;
+      border: 1px solid #fed7aa;
+    }
+
+    /* ── Tables ── */
+    .table-wrap {
+      page-break-inside: avoid;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+    }
+
+    thead tr th {
+      background: #0f172a;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 9px 13px;
+      text-align: left;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    thead tr th:first-child { border-top-left-radius: 6px; }
+    thead tr th:last-child  { border-top-right-radius: 6px; }
+
+    tbody tr td {
+      padding: 8px 13px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #334155;
+      vertical-align: top;
+    }
+
+    tbody tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 2px solid #cbd5e1;
+    }
+
+    /* ── Impact badges inside table ── */
+    .impact-high    { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; }
+    .impact-critical{ background: #fdf2f8; color: #9d174d; border: 1px solid #fbcfe8; display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; }
+    .impact-security{ background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; }
+    .impact-verified{ background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; }
+
+    /* ── Divider ── */
+    hr {
+      border: none;
+      border-top: 1px solid #e2e8f0;
+      margin: 20px 0;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 36px;
+      padding-top: 12px;
+      border-top: 1px solid #e2e8f0;
+      text-align: center;
+      font-size: 10.5px;
+      color: #94a3b8;
+      letter-spacing: 0.3px;
+    }
+
+    @media print {
+      body { padding: 0; }
+      .header-banner { border-radius: 6px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════ HEADER BANNER ═══════════ -->
+  <div class="header-banner">
+    <div class="header-left">
+      <h1>Finova Workspace</h1>
+      <div class="subtitle">UI &amp; Functional Changes Report &mdash; July 2026</div>
+    </div>
+    <div class="header-right">
+      <div class="doc-label">Team Lead Report</div><br/>
+      <strong style="color:#e2e8f0;">Date:</strong> July 25, 2026<br/>
+      <strong style="color:#e2e8f0;">Prepared by:</strong> Development Team<br/>
+      <strong style="color:#e2e8f0;">Classification:</strong> Internal
+    </div>
+  </div>
+
+  <!-- ═══════════ EXECUTIVE SUMMARY ═══════════ -->
+  <h2>Executive Summary</h2>
+  <p>This report consolidates all technical enhancements, UI/UX standardisations, bug fixes, and functional workflow upgrades completed across the Finova Workspace platform during the current sprint. Changes are split across two primary tracks: <strong>UI Fixes</strong> completed today and <strong>Core Functional Upgrades</strong> covering task workflows, file management, and security.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Area</th>
+          <th>Category</th>
+          <th>Scope</th>
+          <th>Impact Level</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>UI &amp; Theme Standardization</strong></td>
+          <td>UI Fixes</td>
+          <td>6 Core Modules</td>
+          <td><span class="impact-high">High Visibility</span></td>
+        </tr>
+        <tr>
+          <td><strong>Task &amp; Review Workflow</strong></td>
+          <td>Functional</td>
+          <td>12 Sub-systems</td>
+          <td><span class="impact-critical">Critical Backend</span></td>
+        </tr>
+        <tr>
+          <td><strong>File Consolidation &amp; Storage RLS</strong></td>
+          <td>Functional</td>
+          <td>5 Utilities</td>
+          <td><span class="impact-security">High Security</span></td>
+        </tr>
+        <tr>
+          <td><strong>Company Vault Module</strong></td>
+          <td>Functional &amp; UI</td>
+          <td>4 Components</td>
+          <td><span class="impact-verified">Verified</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════ SECTION 1: UI CHANGES ═══════════ -->
+  <h2>1. UI &amp; Visual Standardization &mdash; Today&rsquo;s Fixes</h2>
+
+  <!-- 1.1 -->
+  <div class="card">
+    <div class="card-header">
+      <h3>1.1 &nbsp;Light Mode &amp; Theme-Aware Header Redesign</h3>
+      <span class="badge badge-ui">UI Fix</span>
+    </div>
+    <ul>
+      <li><strong>Page Header Optimization:</strong> Updated <code>PageHeader</code> (<code>components/ui/page-header.tsx</code>) to render a theme-aware gradient (<code>from-blue-50 to-indigo-100</code> in Light Mode, dark gradient in Dark Mode).</li>
+      <li><strong>Root Background Cleanup:</strong> Removed legacy hardcoded dark background (<code>#0B0F1A</code>) inline styles from <code>app/(workspace)/tasks/page.tsx</code> for seamless Light Mode switching.</li>
+      <li><strong>Component Contrast:</strong> Resolved low-contrast text and hardcoded dark borders on <code>TaskButton</code> and <code>AnimatedTabs</code> components.</li>
+    </ul>
+  </div>
+
+  <!-- 1.2 -->
+  <div class="card">
+    <div class="card-header">
+      <h3>1.2 &nbsp;Sidebar Active Navigation Redesign</h3>
+      <span class="badge badge-ui">UI Fix</span>
+    </div>
+    <ul>
+      <li><strong>Active Item Pill:</strong> Updated Light Mode navigation styling in <code>components/admin-layout.tsx</code> with a soft blue background (<code>bg-blue-50/80</code>) and a crisp border (<code>border-blue-200</code>).</li>
+      <li><strong>Accent Line &amp; Typography:</strong> Applied deep blue text/icon styling (<code>text-blue-600</code>) paired with a solid left accent bar (<code>bg-blue-600 rounded-r-full</code>).</li>
+    </ul>
+  </div>
+
+  <!-- 1.3 -->
+  <div class="card">
+    <div class="card-header">
+      <h3>1.3 &nbsp;Card Separation, Elevation &amp; Border Normalization</h3>
+      <span class="badge badge-ui">UI Fix</span>
+    </div>
+    <ul>
+      <li><strong>Global Drop Shadows:</strong> Enhanced base <code>Card</code> (<code>components/ui/card.tsx</code>) with an elevated shadow (<code>shadow-[0_8px_30px_rgba(100,116,139,0.15)]</code>) in Light Mode to visually separate content cards.</li>
+      <li><strong>Explicit Card Overrides:</strong> Applied custom drop shadow styling to card grid containers across Files, Tasks (List &amp; Kanban), and Calendar (Month, Week, and Day views).</li>
+      <li><strong>Automated Border Normalization:</strong> Normalised translucent borders (<code>border-white/10</code>, <code>border-white/20</code>) across <strong>14 workspace pages</strong> with responsive <code>border-slate-200/70</code> borders.</li>
+    </ul>
+  </div>
+
+  <!-- 1.4 -->
+  <div class="card">
+    <div class="card-header">
+      <h3>1.4 &nbsp;Header Action Buttons &amp; Tab Bar Polish</h3>
+      <span class="badge badge-ui">UI Fix</span>
+    </div>
+    <ul>
+      <li><strong>Standardized Action Buttons:</strong> Updated primary header buttons (<em>Assign Task</em>, <em>Create Announcement</em>, <em>Add New Item</em>, <em>New Project</em>, <em>New Team</em>) across all panels to use <code>size="lg"</code>, white background, and crisp dark text (<code>text-slate-900</code>).</li>
+      <li><strong>Calendar Tab Fit:</strong> Adjusted the Day / Week / Month selection container in <code>calendar/page.tsx</code> from a fixed <code>w-[280px]</code> to <code>w-fit</code> to eliminate dead whitespace on the right.</li>
+    </ul>
+  </div>
+
+  <!-- ═══════════ SECTION 2: FUNCTIONAL ═══════════ -->
+  <h2>2. Core Functional &amp; System Workflows &mdash; Functional Upgrades</h2>
+
+  <!-- 2.1 -->
+  <div class="card functional">
+    <div class="card-header">
+      <h3>2.1 &nbsp;Task Review &amp; Approval Engine</h3>
+      <span class="badge badge-functional">Functional</span>
+    </div>
+    <ul>
+      <li><strong>Multi-State Review Flow:</strong> Implemented a complete state machine for task progress and completion reviews: <code>in_progress &rarr; pending_review &rarr; pending_completion_review &rarr; completed</code>.</li>
+      <li><strong>Note &amp; Comment Persistence:</strong> Updated the API layer (<code>lib/api.ts</code>) to save and render employee progress notes and manager feedback comments across review steps.</li>
+      <li><strong>Past Date/Time Validation:</strong> Added strict validation blocking past due dates/times on task creation and milestone setup.</li>
+    </ul>
+  </div>
+
+  <!-- 2.2 -->
+  <div class="card functional">
+    <div class="card-header">
+      <h3>2.2 &nbsp;Phased Task &amp; Milestone Architecture</h3>
+      <span class="badge badge-functional">Functional</span>
+    </div>
+    <ul>
+      <li><strong>Sequential Enforcement:</strong> Gated milestone execution at the API level so Milestone N+1 is locked until Milestone N is approved.</li>
+      <li><strong>Live Weight Budget Indicator:</strong> Added real-time weight calculation display (yellow when &ne;&nbsp;100%, green when =&nbsp;100%).</li>
+      <li><strong>Submission Lock Toggle:</strong> Added an assigner-facing toggle to open or lock individual milestone submissions.</li>
+    </ul>
+  </div>
+
+  <!-- 2.3 -->
+  <div class="card functional">
+    <div class="card-header">
+      <h3>2.3 &nbsp;File Upload Consolidation &amp; Storage Security</h3>
+      <span class="badge badge-security">Security</span>
+    </div>
+    <ul>
+      <li><strong>Unified Upload Utility:</strong> Refactored 7 redundant upload implementations into a centralized <code>lib/file-utils.ts</code> module exposing <code>uploadFile()</code>, <code>getSignedFileUrl()</code>, and <code>downloadFile()</code>.</li>
+      <li><strong>Blob-Based Downloads:</strong> Switched all file download triggers to blob-based mechanism for reliable cross-browser compatibility.</li>
+      <li><strong>Storage RLS Matching:</strong> Extended Supabase Storage Row-Level Security policies to cover milestone review files and full storage path matching.</li>
+    </ul>
+  </div>
+
+  <!-- 2.4 -->
+  <div class="card functional">
+    <div class="card-header">
+      <h3>2.4 &nbsp;Vault Module &amp; Security Controls</h3>
+      <span class="badge badge-functional">Functional</span>
+    </div>
+    <ul>
+      <li><strong>Sensitive Field Validation:</strong> Enforced mandatory sensitive value inputs for Password, API Key, and Other vault item types on creation.</li>
+      <li><strong>Reveal Height Stability:</strong> Fixed card container layout shifts that occurred when toggling sensitive value visibility.</li>
+    </ul>
+  </div>
+
+  <!-- ═══════════ SECTION 3: FILE IMPACT MATRIX ═══════════ -->
+  <h2>3. Master File Impact Matrix</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:38%;">File Path</th>
+          <th style="width:18%;">Category</th>
+          <th>Primary Modification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>components/ui/page-header.tsx</code></td>
+          <td>UI System</td>
+          <td>Responsive light/dark gradient header styling</td>
+        </tr>
+        <tr>
+          <td><code>components/admin-layout.tsx</code></td>
+          <td>Navigation</td>
+          <td>Active state Light Mode styling + blue accent bar</td>
+        </tr>
+        <tr>
+          <td><code>components/ui/card.tsx</code></td>
+          <td>UI System</td>
+          <td>Global card elevation shadows &amp; slate borders</td>
+        </tr>
+        <tr>
+          <td><code>app/(workspace)/tasks/page.tsx</code></td>
+          <td>Task Workflow</td>
+          <td>Light background fix + card shadow + review workflow</td>
+        </tr>
+        <tr>
+          <td><code>app/(workspace)/calendar/page.tsx</code></td>
+          <td>Calendar</td>
+          <td>Tab width fix (<code>w-fit</code>) + cell border/shadow pass</td>
+        </tr>
+        <tr>
+          <td><code>app/(workspace)/vault/page.tsx</code></td>
+          <td>Vault Module</td>
+          <td>Header button standardization + sensitive field validation</td>
+        </tr>
+        <tr>
+          <td><code>lib/file-utils.ts</code></td>
+          <td>File Utilities</td>
+          <td>Centralized file upload &amp; blob-based download handler</td>
+        </tr>
+        <tr>
+          <td><code>lib/api.ts</code></td>
+          <td>Backend API</td>
+          <td>Review notes persistence &amp; milestone execution API</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════ FOOTER ═══════════ -->
+  <div class="footer">
+    Finova Workspace &mdash; Technical Changes Report &mdash; July 2026 &nbsp;&bull;&nbsp; Internal Document &nbsp;&bull;&nbsp; Confidential
+  </div>
+
+</body>
+</html>
