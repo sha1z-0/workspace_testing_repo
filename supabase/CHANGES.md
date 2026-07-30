@@ -1,5 +1,156 @@
 # Changes Log — Finova Workspace
 
+## [2026-07-30] Dashboard — Redesign "Due Today" Section (Image 2 Alignment + Left Priority Accents + Pill Badges)
+### Status: Completed
+### Problem Solved
+1. The "Due Today" card section on the employee Dashboard page needed to be redesigned to match the exact mockup in Image 2.
+
+### Actual Changes Made
+- **Header Redesign**: Added `CheckSquare` icon box, sentence-case `Due today` title, `Priority tasks for today` subtitle, task counter pill `X tasks`, and `View all >` link to `/tasks`.
+- **Left Priority Accent Bar**: Added absolute left vertical accent indicator bar (`w-[4px] bg-red-500` / `bg-amber-400` / `bg-[#3B82F6]`) inside each task card for guaranteed high-visibility rendering matching Image 2 mockup.
+- **Clean Status Pill Badges**: Formatted status badges cleanly as `In progress`, `Pending review`, `Completed`, `Archived`.
+- **Full-Width Progress Bar**: Rendered a full-width progress bar inside each card with a percentage label at the right end.
+
+### Files Touched
+- `app/(workspace)/dashboard/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-30] Tasks — Fix Milestone Lock/Unlock API & Redesign Full Assigner Lock Button
+### Status: Completed
+### Problem Solved
+1. Toggling milestone and task late submission locks previously failed because `toggleLateSubmissionMilestone` and `toggleLateSubmissionTask` API functions were missing in `lib/api.ts`.
+2. The assigner lock/unlock control was previously rendered as a tiny icon in the milestone card header flex row.
+
+### Actual Changes Made
+- **API Functions Added**: Implemented `toggleLateSubmissionMilestone`, `toggleMilestoneSubmission`, and `toggleLateSubmissionTask` in `lib/api.ts` to update database flags (`allow_late_submission`, `submission_open`).
+- **Removed Header Icon**: Removed the small lock icon button from the milestone card header flex row in View Details.
+- **Redesigned Full Assigner Button**: Rendered a full button at the bottom-right actions bar for assigners when a milestone is past due (`mPastDue === true`):
+  - `Allow Late Submission` (emerald button with `Unlock` icon) when locked.
+  - `Lock Submission` (red button with `Lock` icon) when unlocked.
+
+### Files Touched
+- `lib/api.ts`
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-30] Tasks — Add "See Review" Button & "Assigner's Review" Modal
+### Status: Completed
+### Problem Solved
+1. When a reviewer rejected or approved a milestone with comments or attached files, there was no dedicated button to view the reviewer's attached file and download it.
+2. The inline `Reviewer feedback: ...` text box created clutter inside the milestone card row in the View Details modal.
+
+### Actual Changes Made
+- **Removed Inline Feedback Box**: Removed the inline `Reviewer feedback: ...` text box from the milestone card row in the View Details modal.
+- **Added "See Review" Button**: Rendered a `See Review` button at the bottom-right of milestone cards that have reviewer feedback or attached reviewer files.
+- **Created "Assigner's Review" Modal**: Implemented a new `<Dialog>` popup titled **Assigner's Review** displaying the decision status pill, full reviewer comment text box, and reviewer attached file preview with a **Download** button.
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-30] Tasks — Clean View Details Milestone Rows During Pending Review
+### Status: Completed
+### Problem Solved
+1. When a milestone was in pending review, the View Details modal displayed inline accept/reject buttons, file download icons, and employee submission note boxes directly inside the milestone row, creating unwanted visual clutter.
+
+### Actual Changes Made
+- **Removed Inline Action Buttons**: Removed `canReview` quick approve/reject buttons (`CheckCircle`, `X`) and file download icons from inside the View Details milestone card row.
+- **Removed Employee Note Box**: Removed the `Employee note: ...` comment box from inside the View Details milestone card row.
+- **Uniform Milestone Display**: Ensured milestone rows in the View Details modal remain clean and consistent across all statuses (showing step badge, title, deadline pill, status badge pill, and description).
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-30] Tasks — Fix First-Click Milestone Submission Loading Issue in Review Modal
+### Status: Completed
+### Problem Solved
+1. Opening the Approve Milestone or Reject Milestone modal from task cards sometimes failed to display the ASSIGNEE'S SUBMISSION card on the first try due to asynchronous React state array update delays.
+
+### Actual Changes Made
+- **Direct Target Milestone State**: Introduced `activeMilestoneReviewData` state in `app/(workspace)/tasks/page.tsx` to hold the active target milestone object directly.
+- **Pre-Open Async Fetching**: Updated `openMilestoneDialog` and `handleQuickMilestoneAction` to resolve the target milestone object and its latest review data BEFORE opening the dialog.
+- **Instant First-Click Render**: Bound `currentMilestone` to `activeMilestoneReviewData || milestones.find(...)`, ensuring the ASSIGNEE'S SUBMISSION preview renders instantly 100% of the time on the very first click.
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-30] Tasks — Redesign "Reject Milestone" Modal (Image 2 Alignment + Dynamic Subtitle + Required Comment Label + Red Action Button)
+### Status: Completed
+### Problem Solved
+1. The Reject Milestone popup in the Tasks page needed to be redesigned to match the exact mockup in Image 2.
+2. The card required a dynamic subtitle specifying the milestone name and assignee, an uppercase `COMMENT ― REQUIRED` label, a styled assignee submission preview, and a red `✕ Reject & Return` button.
+3. The modal required full Light and Dark mode theme support.
+
+### Actual Changes Made
+- **UI Redesign**: Re-architected Milestone Review `<DialogContent>` in `app/(workspace)/tasks/page.tsx` with theme-aware tokens (`bg-white dark:bg-[#121826]`, `border-slate-200 dark:border-white/[0.06]`, `text-slate-900 dark:text-[#F1F5F9]`).
+- **Dynamic Header Subtitle**: Updated subtitle text for milestone rejection to dynamically format: *"Send [Milestone Title] back to [Assignee Name] with feedback."*.
+- **COMMENT ― REQUIRED Label**: Displayed `COMMENT ― REQUIRED` with `― REQUIRED` highlighted in bold red font (`text-red-500 dark:text-[#F87171]`).
+- **ASSIGNEE'S SUBMISSION Preview**: Styled container for employee notes and submission file card with `FileText` icon and `Open` button.
+- **Red Reject & Return Action Button**: Replaced generic button with a styled red pill button (`bg-red-100 dark:bg-[#3B1719] text-red-700 dark:text-[#FCA5A5] border border-red-200 dark:border-red-900/50`) featuring an `X` icon preceding the text (`✕ Reject & Return`).
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-30] Tasks — Redesign "Manage Milestones" Modal (Image 2 Alignment + Dashed New Milestone Card + Dual Mode)
+### Status: Completed
+### Problem Solved
+1. The Manage Milestones popup in the Tasks page needed to be redesigned to match the exact mockup in Image 2.
+2. The card required full Light and Dark mode theme support, preserving the app's light mode design system while keeping dark mode contrast intact.
+
+### Actual Changes Made
+- **UI Redesign**: Re-architected Manage Milestones `<DialogContent>` in `app/(workspace)/tasks/page.tsx` with theme-aware tokens (`bg-white dark:bg-[#121826]`, `border-slate-200 dark:border-white/[0.06]`, `text-slate-900 dark:text-[#F1F5F9]`).
+- **Existing Milestone Item Rows**: Styled each milestone row with a circular blue step badge `1`, bold title, status pill badge, up/down reorder chevrons, vertical divider `|`, `Pencil` + `Edit` button, and `X` delete icon.
+- **Dashed "+ NEW MILESTONE" Section Card**: Created a dedicated rounded box with a dashed border (`border-dashed border-slate-300 dark:border-white/15 bg-slate-50/50 dark:bg-[#0F1523]/40`) containing a full-width title input, full-width description textarea, 2-column Date/Time pickers, and a primary blue `+ Add Milestone` button at bottom right.
+- **Footer Action Bar**: Added a horizontal divider line above footer featuring a primary blue `Done` button at bottom right.
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-30] Tasks — Redesign Task Details ("View Details") Modal (Image 2 Alignment + Inline Descriptions + Deadlines + Dual Mode)
+### Status: Completed
+### Problem Solved
+1. The Task Details ("View Details") popup in the Tasks page needed to be redesigned to match the exact mockup in Image 2.
+2. All milestone descriptions needed to be rendered clearly and permanently inside milestone cards (`pl-8`) alongside their deadline pills (`Clock` icon + formatted date/time).
+3. The modal required full Light and Dark mode theme support.
+
+### Actual Changes Made
+- **UI Redesign**: Re-architected View Details `<DialogContent>` in `app/(workspace)/tasks/page.tsx` with theme-aware tokens (`bg-white dark:bg-[#121826]`, `border-slate-200 dark:border-white/[0.06]`, `text-slate-900 dark:text-[#F1F5F9]`, `bg-slate-50 dark:bg-[#0B0F1A]/80`).
+- **Clear Inline Milestone Descriptions**: Removed hidden accordion state and displayed milestone descriptions permanently inside each card (`pl-8 text-[13px] text-slate-600 dark:text-[#94A3B8]`).
+- **Milestone Deadline Property Resolution**: Extended deadline lookup to evaluate `m.dueDate || m.due_date || m.due_datetime || m.dueDatetime`, ensuring milestone deadlines render reliably across all Supabase payload formats.
+- **Right-Aligned Milestone Status & Deadline**: Positioned milestone deadline pills (`Clock` icon + `MMM d, h:mm a`) and status badges (`Not Started`, `Pending Review`, `Approved`) together at the rightmost edge of each milestone card header row, matching Image 2 mockup.
+- **MILESTONES Header & Counter**: Styled `MILESTONES (X/Y)` header with `CheckSquare` icon and `Pencil` + `Manage` button for assigners.
+- **Progress Card**: Styled ProgressRing overview box with `UserCircle2` icon + *"Assigned to [User]"* and `Clock` icon + *"Due [Date, Time]"*.
+- **Footer Action Buttons**: Updated `Archive Task` and `Close` buttons with styled rounded borders and dual-theme hover effects.
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+
+## [2026-07-30] Tasks — Redesign "Assign New Task" Card (Image 2 Alignment + Light/Dark Mode + Validation Auto-Scroll)
+### Status: Completed
+### Problem Solved
+1. The "Assign New Task" card popup in the Tasks page needed to be redesigned to match the exact mockup in Image 2.
+2. The card required full Light and Dark mode theme support, preserving the app's light mode design system while keeping dark mode contrast intact.
+3. Missing mandatory fields needed to display inline error feedback ("Please fill in the required field.") and automatically scroll the modal view to center the missing field.
+
+### Actual Changes Made
+- **UI Redesign**: Re-architected `<DialogContent>` in `app/(workspace)/tasks/page.tsx` with theme-aware tokens (`bg-white dark:bg-[#121826]`, `border-slate-200 dark:border-white/[0.06]`, `text-slate-900 dark:text-[#F1F5F9]`, `bg-slate-50 dark:bg-[#0B0F1A]`).
+- **Footer Action Bar**: Added a horizontal divider line above footer buttons featuring a `Cancel` button (closes modal) and `+ Assign Task` / `+ Create Task` primary blue button.
+- **Standalone Checkbox Card**: Styled "Break this task into milestones?" in a standalone rounded container with subtitle *"Split the task into smaller, trackable steps."*.
+- **Milestones Section**: Added **MILESTONES** header with `CheckSquare` icon, `(i) All fields below are required for each milestone.` blue info text, blue circular number badges (`1`, `2`), trash icon button, and 2-column `DUE DATE *` / `DUE TIME *` grid.
+- **Scrollbar & Padding Fix**: Updated modal scroll container padding to `pr-3 sm:pr-4` and inner milestone paddings to `p-3.5` with `min-w-0 box-border` so input fields are never clipped by Windows/browser scrollbars.
+- **Employee View Optimization**: Arranged `Due Date` and `Due Time` side-by-side on a single 2-column row for non-manager accounts (`isManager = false`), removing the empty blank grid space next to Due Time.
+- **Milestone Required Markers & Auto-Scroll**: Added explicit red asterisks (`*`) to all milestone input headers (`Milestone title *`, `Description *`, `DUE DATE *`, `DUE TIME *`), unique DOM IDs (`task-form-milestone-${i}-title`, `description`, `dueDate`, `dueTime`), per-field error state tracking, inline error messages (*"Please fill in the required field."*), and auto-scrolling to the exact missing milestone input upon submission.
+- **Focus Ring Left Clearance**: Added `pl-2` to the modal scroll container to ensure the 2-3px blue focus outline around selected inputs renders completely without getting clipped on the left edge.
+
+### Files Touched
+- `app/(workspace)/tasks/page.tsx`
+- `supabase/CHANGES.md`
+
 ## [2026-07-27] Calendar — Event Details Delete Button Binding & Handler
 ### Status: Completed
 ### Problem Solved

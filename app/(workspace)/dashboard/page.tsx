@@ -275,48 +275,145 @@ export default function DashboardPage() {
       {/* Main Content Areas */}
       <div className="grid gap-6 md:grid-cols-2">
         <motion.div variants={itemVariants}>
-          <Card className="h-full border-none shadow-md bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CheckSquare className="h-5 w-5 text-primary" />
-                Due Today
-              </CardTitle>
-              <CardDescription>Priority tasks for today</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {todayTasks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                  <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
-                    <CheckSquare className="h-6 w-6 opacity-50" />
-                  </div>
-                  <p>You're all clear for today!</p>
+          <div className="rounded-[18px] border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-[#121826] text-slate-900 dark:text-[#F1F5F9] shadow-xl p-6 space-y-5">
+            {/* Header */}
+            <div className="flex items-center justify-between min-w-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-[#3B82F6] flex items-center justify-center flex-shrink-0">
+                  <CheckSquare className="h-5 w-5" />
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {todayTasks.map((task) => (
+                <div className="min-w-0">
+                  <h3 className="text-[18px] font-bold text-slate-900 dark:text-[#F1F5F9] leading-tight truncate">
+                    Due today
+                  </h3>
+                  <p className="text-[13px] text-slate-500 dark:text-[#64748B]">
+                    Priority tasks for today
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                <span className="px-3 py-1 rounded-full text-[12px] font-medium bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10">
+                  {todayTasks.length} {todayTasks.length === 1 ? "task" : "tasks"}
+                </span>
+                <Link
+                  href="/tasks"
+                  className="text-[13px] font-semibold text-[#3B82F6] hover:underline inline-flex items-center gap-1 transition-colors"
+                >
+                  View all &gt;
+                </Link>
+              </div>
+            </div>
+
+            {/* Task Items List */}
+            {todayTasks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center text-slate-400 dark:text-slate-500">
+                <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-white/[0.04] flex items-center justify-center mb-3">
+                  <CheckSquare className="h-6 w-6 opacity-40" />
+                </div>
+                <p className="text-[14px] font-medium">You're all clear for today!</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {todayTasks.map((task) => {
+                  const priority = (task.priority || "medium").toLowerCase()
+                  const status = (task.status || "todo").toLowerCase()
+
+                  // Left accent bar background color based on priority
+                  const priorityBarBg =
+                    priority === "urgent"
+                      ? "bg-red-500"
+                      : priority === "high"
+                      ? "bg-amber-500"
+                      : priority === "medium"
+                      ? "bg-amber-400"
+                      : "bg-blue-500"
+
+                  // Priority Text Color
+                  const priorityTextColor =
+                    priority === "urgent"
+                      ? "text-red-500 dark:text-red-400"
+                      : priority === "high"
+                      ? "text-amber-500 dark:text-amber-400"
+                      : priority === "medium"
+                      ? "text-amber-500 dark:text-amber-400"
+                      : "text-blue-500 dark:text-blue-400"
+
+                  // Priority Label Capitalized
+                  const priorityLabel = priority.charAt(0).toUpperCase() + priority.slice(1)
+
+                  // Status badge styling
+                  let statusBadgeStyle = "bg-slate-200 dark:bg-white/[0.08] text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-white/10"
+                  let statusLabel = status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())
+
+                  if (status === "in_progress") {
+                    statusBadgeStyle = "bg-blue-500/10 text-blue-600 dark:text-[#93C5FD] border border-blue-500/20"
+                    statusLabel = "In progress"
+                  } else if (status === "pending_review") {
+                    statusBadgeStyle = "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                    statusLabel = "Pending review"
+                  } else if (status === "completed") {
+                    statusBadgeStyle = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                    statusLabel = "Completed"
+                  } else if (status === "archived") {
+                    statusBadgeStyle = "bg-slate-200 dark:bg-white/[0.08] text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-white/10"
+                    statusLabel = "Archived"
+                  }
+
+                  // Progress Bar Fill Color
+                  const progressBarColor =
+                    status === "completed"
+                      ? "bg-emerald-500"
+                      : priority === "urgent"
+                      ? "bg-red-500"
+                      : priority === "high" || priority === "medium"
+                      ? "bg-amber-500"
+                      : "bg-[#3B82F6]"
+
+                  return (
                     <motion.div
                       key={task.id}
                       initial={{ x: -10, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
-                      className="flex items-center space-x-4 p-3 rounded-xl bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+                      className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0B0F1A]/80 p-3.5 pl-4.5 space-y-2.5 transition-colors"
                     >
-                      <div className={`h-3 w-3 rounded-full shadow-sm ring-2 ring-white dark:ring-slate-900 ${getPriorityColor(task.priority)}`} />
-                      <div className="flex-1 space-y-1">
-                        <p className="text-sm font-medium leading-none">{task.title}</p>
-                        <div className="flex items-center gap-2">
-                          <Progress value={task.progress} className="h-1.5 w-20" />
-                          <span className="text-[10px] text-muted-foreground">{task.progress}%</span>
+                      {/* Left accent vertical priority bar */}
+                      <div className={`absolute left-0 top-0 bottom-0 w-[4px] ${priorityBarBg}`} />
+
+                      {/* Top Row: Title + Priority Label + Status Badge */}
+                      <div className="flex items-center justify-between min-w-0 gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-bold text-[14px] text-slate-900 dark:text-white truncate">
+                            {task.title}
+                          </span>
+                          <span className={`text-[12px] font-semibold flex-shrink-0 ${priorityTextColor}`}>
+                            {priorityLabel}
+                          </span>
                         </div>
+
+                        <span className={`px-3 py-1 rounded-full text-[12px] font-medium flex-shrink-0 ${statusBadgeStyle}`}>
+                          {statusLabel}
+                        </span>
                       </div>
-                      <Badge variant={task.status === "completed" ? "secondary" : "outline"} className="capitalize">
-                        {task.status}
-                      </Badge>
+
+                      {/* Bottom Row: Full-width Progress Bar + Percentage */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${progressBarColor}`}
+                            style={{ width: `${task.progress || 0}%` }}
+                          />
+                        </div>
+                        <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 tabular-nums flex-shrink-0">
+                          {task.progress || 0}%
+                        </span>
+                      </div>
                     </motion.div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </motion.div>
 
         <motion.div variants={itemVariants}>

@@ -13,7 +13,7 @@ import {
   Loader2, Plus, Search, Filter, CheckCircle, CheckSquare,
   UserCircle2, LayoutGrid, Calendar as CalendarIcon, X, FileText, Eye,
   Send, Play, MessageSquare, Download, Paperclip, Lock, ListChecks, Unlock,
-  ChevronDown, ArrowUpDown
+  ChevronDown, ArrowUpDown, Info, Trash2, Pencil, Clock
 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { PageHeader } from "@/components/ui/page-header"
@@ -43,12 +43,14 @@ export default function TasksPage() {
   const [isAddingTask, setIsAddingTask] = useState(false)
   const [isUpdatingTask, setIsUpdatingTask] = useState(false)
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false)
+  const [titleError, setTitleError] = useState(false)
   const [descriptionError, setDescriptionError] = useState(false)
   const [assigneeError, setAssigneeError] = useState(false)
   const [dueDateError, setDueDateError] = useState(false)
   const [dueTimeError, setDueTimeError] = useState(false)
   const [pastDatetimeError, setPastDatetimeError] = useState(false)
   const [milestoneFormError, setMilestoneFormError] = useState(false)
+  const [milestoneErrors, setMilestoneErrors] = useState<Record<number, { title?: boolean; description?: boolean; dueDate?: boolean; dueTime?: boolean; pastDatetime?: boolean }>>({})
   const [activeTab, setActiveTab] = useState("all")
 
   // Review workflow state
@@ -80,6 +82,8 @@ export default function TasksPage() {
   const [milestoneFile, setMilestoneFile] = useState<File | null>(null)
   const [milestoneAction, setMilestoneAction] = useState<"submit" | "approve" | "reject">("submit")
   const [isMilestoneSubmitting, setIsMilestoneSubmitting] = useState(false)
+  const [activeMilestoneReviewData, setActiveMilestoneReviewData] = useState<any>(null)
+  const [viewingReviewMilestone, setViewingReviewMilestone] = useState<any>(null)
 
   // Mid-task milestone management state
   const [manageMilestonesOpen, setManageMilestonesOpen] = useState(false)
@@ -200,9 +204,9 @@ export default function TasksPage() {
     try {
       setIsMilestoneSubmitting(true)
       await tasksAPI.approveMilestone(milestoneDialogId, milestoneComment, user!.id, milestoneFile || undefined, user?.id)
-      if (detailTask) { 
-        const m = await tasksAPI.getTaskMilestones(detailTask.id); 
-        setMilestones(m); 
+      if (detailTask) {
+        const m = await tasksAPI.getTaskMilestones(detailTask.id);
+        setMilestones(m);
         await fetchTasks();
         // Update the detailTask to reflect status changes (e.g., if it moved to completed)
         const freshTasks = await tasksAPI.getUserTasks(user!.id, user!.role);
@@ -240,7 +244,8 @@ export default function TasksPage() {
         const t = tasks.find(task => task.id === taskId)
         if (t) setDetailTask(t)
         setMilestones(ms)
-        openMilestoneDialog(pendingMs.id, action)
+        setActiveMilestoneReviewData(pendingMs)
+        openMilestoneDialog(pendingMs.id, action, ms)
       } else {
         toast({ title: "No pending milestone", description: "This task does not have a milestone awaiting review." })
       }
@@ -288,8 +293,23 @@ export default function TasksPage() {
     }
   }
 
-  const openMilestoneDialog = (milestoneId: string, actionType: "submit" | "approve" | "reject") => {
-    setMilestoneDialogId(milestoneId); setMilestoneAction(actionType); setMilestoneComment(""); setMilestoneFile(null); setMilestoneDialogOpen(true)
+  const openMilestoneDialog = async (milestoneId: string, actionType: "submit" | "approve" | "reject", currentMilestoneList?: any[]) => {
+    setMilestoneDialogId(milestoneId)
+    setMilestoneAction(actionType)
+    setMilestoneComment("")
+    setMilestoneFile(null)
+
+    const list = currentMilestoneList || milestones
+    let target = list.find((m: any) => m.id === milestoneId)
+    if ((!target || !target.latestReview) && detailTask?.id) {
+      try {
+        const ms = await tasksAPI.getTaskMilestones(detailTask.id)
+        setMilestones(ms)
+        target = ms.find((m: any) => m.id === milestoneId) || target
+      } catch { /* fallback */ }
+    }
+    setActiveMilestoneReviewData(target || null)
+    setMilestoneDialogOpen(true)
   }
 
   // --- Mid-task milestone management handlers ---
@@ -302,7 +322,7 @@ export default function TasksPage() {
 
   const handleAddMilestoneMidTask = async () => {
     if (!detailTask || !newMilestoneTitle.trim() || !newMilestoneDescription.trim() || !newMilestoneDueDate || !newMilestoneDueTime) return
-    
+
     const [year, month, day] = newMilestoneDueDate.split('-');
     const [hours, minutes] = newMilestoneDueTime.split(':');
     const mDt = new Date();
@@ -412,7 +432,7 @@ export default function TasksPage() {
     const newList = [...milestoneListForManage]
     const swapIndex = index + direction
     if (swapIndex < 0 || swapIndex >= newList.length) return
-    ;[newList[index], newList[swapIndex]] = [newList[swapIndex], newList[index]]
+      ;[newList[index], newList[swapIndex]] = [newList[swapIndex], newList[index]]
     const reordered = newList.map((m, i) => ({ ...m, order_index: i }))
     setMilestoneListForManage(reordered)
     handleReorderMilestones(reordered.map(m => m.id))
@@ -423,41 +443,76 @@ export default function TasksPage() {
     return firstPending ? firstPending.order_index : -1
   }
 
-  // --- Create Task (unchanged) ---
+  // Helper for auto-scrolling to missing required fields
+  const scrollToElement = (id: string) => {
+    setTimeout(() => {
+      const el = document.getElementById(id)
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" })
+      }
+    }, 50)
+  }
+
+  // --- Create Task ---
   const handleCreateTask = async () => {
     if (!user) return
+
+    // Validate: Title is mandatory
+    if (!newTask.title.trim()) {
+      setTitleError(true)
+      scrollToElement("task-form-title")
+      return
+    }
+    setTitleError(false)
+
+    // Validate: Description is mandatory
     if (!newTask.description.trim()) {
       setDescriptionError(true)
+      scrollToElement("task-form-description")
       return
     }
     setDescriptionError(false)
+
     // Validate: manager must select at least one assignee
     if (isManager && newTask.assigneeIds.length === 0) {
       setAssigneeError(true)
+      scrollToElement("task-form-assignee")
       return
     }
     setAssigneeError(false)
+
     // Validate: Due Date and Due Time are mandatory
     if (!newTask.dueDate) {
       setDueDateError(true)
+      scrollToElement("task-form-due-date")
       return
     }
     setDueDateError(false)
 
     if (!newTask.dueTime) {
       setDueTimeError(true)
+      scrollToElement("task-form-due-time")
       return
     }
     setDueTimeError(false)
+
+    // Helper to normalize 2-digit years (e.g. 26 -> 2026)
+    const parseYear = (yearStr: string) => {
+      let yr = parseInt(yearStr, 10)
+      if (yr < 100) yr += 2000
+      return yr
+    }
+
     // Validate: combined datetime must not be in the past
     const [tYear, tMonth, tDay] = newTask.dueDate.split('-');
     const [tHours, tMinutes] = newTask.dueTime.split(':');
     const constructedDt = new Date();
-    constructedDt.setFullYear(parseInt(tYear), parseInt(tMonth) - 1, parseInt(tDay));
+    constructedDt.setFullYear(parseYear(tYear), parseInt(tMonth) - 1, parseInt(tDay));
     constructedDt.setHours(parseInt(tHours), parseInt(tMinutes), 0, 0);
-    
+
     if (constructedDt.getTime() < Date.now()) {
       setPastDatetimeError(true)
+      scrollToElement("task-form-due-time")
       toast({
         title: "Invalid due date/time",
         description: "The due date and time cannot be in the past.",
@@ -465,30 +520,67 @@ export default function TasksPage() {
       })
       return
     }
-    // Validate: milestone datetimes must not be in the past
+
+    // Validate: milestone fields and datetimes
     if (newTask.useMilestones) {
-      let milestoneError = false;
-      for (const m of newTask.milestones) {
-        if (m.dueDate && m.dueTime) {
-          const [mYear, mMonth, mDay] = m.dueDate.split('-');
-          const [mHours, mMinutes] = m.dueTime.split(':');
-          const mDt = new Date();
-          mDt.setFullYear(parseInt(mYear), parseInt(mMonth) - 1, parseInt(mDay));
-          mDt.setHours(parseInt(mHours), parseInt(mMinutes), 0, 0);
-          
+      let milestoneErrorFound = false
+      const errors: Record<number, { title?: boolean; description?: boolean; dueDate?: boolean; dueTime?: boolean; pastDatetime?: boolean }> = {}
+
+      for (let i = 0; i < newTask.milestones.length; i++) {
+        const m = newTask.milestones[i]
+        const itemErrors: { title?: boolean; description?: boolean; dueDate?: boolean; dueTime?: boolean; pastDatetime?: boolean } = {}
+
+        if (!m.title.trim()) {
+          itemErrors.title = true
+          milestoneErrorFound = true
+          scrollToElement(`task-form-milestone-${i}-title`)
+        } else if (!m.description?.trim()) {
+          itemErrors.description = true
+          milestoneErrorFound = true
+          scrollToElement(`task-form-milestone-${i}-description`)
+        } else if (!m.dueDate) {
+          itemErrors.dueDate = true
+          milestoneErrorFound = true
+          scrollToElement(`task-form-milestone-${i}-dueDate`)
+        } else if (!m.dueTime) {
+          itemErrors.dueTime = true
+          milestoneErrorFound = true
+          scrollToElement(`task-form-milestone-${i}-dueTime`)
+        } else {
+          const [mYear, mMonth, mDay] = m.dueDate.split('-')
+          const [mHours, mMinutes] = m.dueTime.split(':')
+          const mDt = new Date()
+          mDt.setFullYear(parseYear(mYear), parseInt(mMonth) - 1, parseInt(mDay))
+          mDt.setHours(parseInt(mHours), parseInt(mMinutes), 0, 0)
+
           if (mDt.getTime() < Date.now()) {
+            itemErrors.pastDatetime = true
+            milestoneErrorFound = true
             toast({
               title: "Invalid milestone date/time",
               description: `Milestone "${m.title || 'Untitled'}" has a due date/time in the past.`,
               variant: "destructive"
             })
-            milestoneError = true;
-            break;
+            scrollToElement(`task-form-milestone-${i}-dueTime`)
+          }
+        }
+
+        if (Object.keys(itemErrors).length > 0) {
+          errors[i] = itemErrors
+          if (milestoneErrorFound) {
+            setMilestoneErrors(errors)
+            return
           }
         }
       }
-      if (milestoneError) return;
+
+      if (milestoneErrorFound) {
+        setMilestoneErrors(errors)
+        return
+      }
+      setMilestoneErrors({})
     }
+
     try {
       setIsAddingTask(true)
       const assigneeIds = isManager && newTask.assigneeIds.length > 0 ? newTask.assigneeIds : [user.id]
@@ -511,10 +603,12 @@ export default function TasksPage() {
         milestones: newTask.useMilestones ? newTask.milestones.filter(m => m.title.trim()) : undefined
       })
       setNewTask({ title: "", description: "", priority: "medium", status: "todo", progress: 0, assigneeIds: [], viewerIds: [], dueDate: "", dueTime: "", useMilestones: false, milestones: [] })
+      setTitleError(false)
       setDescriptionError(false)
       setAssigneeError(false)
       setDueDateError(false)
       setDueTimeError(false)
+      setPastDatetimeError(false)
       toast({ title: "Task created", description: isManager && assigneeIds.some(id => id !== user.id) ? `Task assigned to ${assigneeNames.join(", ")}.` : "Task created successfully." })
       await fetchTasks()
       setIsTaskDialogOpen(false)
@@ -707,14 +801,14 @@ export default function TasksPage() {
         const order = { urgent: 0, high: 1, medium: 2, low: 3 }
         return (order[a.priority as keyof typeof order] ?? 2) - (order[b.priority as keyof typeof order] ?? 2)
       }
-      
+
       if (sortBy === "deadline") {
         const dateA = a.dueDatetime || a.dueDate
         const dateB = b.dueDatetime || b.dueDate
         if (!dateA && !dateB) return 0
         if (!dateA) return 1
         if (!dateB) return -1
-        
+
         const now = Date.now()
         const diffA = Math.abs(new Date(dateA).getTime() - now)
         const diffB = Math.abs(new Date(dateB).getTime() - now)
@@ -742,7 +836,7 @@ export default function TasksPage() {
         (t as any).status === "archived" &&
         (isAssigner(t) || isAssignee(t)) &&
         (t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-         t.description?.toLowerCase().includes(searchQuery.toLowerCase()))
+          t.description?.toLowerCase().includes(searchQuery.toLowerCase()))
       )
       return sortTasksArray(archivedTasks)
     }
@@ -790,11 +884,13 @@ export default function TasksPage() {
             onOpenChange={(open) => {
               setIsTaskDialogOpen(open)
               if (!open) {
+                setTitleError(false)
                 setDescriptionError(false)
                 setAssigneeError(false)
                 setDueDateError(false)
                 setDueTimeError(false)
                 setPastDatetimeError(false)
+                setMilestoneErrors({})
                 setNewTask({
                   title: "",
                   description: "",
@@ -816,147 +912,496 @@ export default function TasksPage() {
                 <Plus className="mr-2 h-5 w-5" />{isManager ? "Assign Task" : "Create Task"}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[560px] max-h-[90vh] bg-[#121826] border-white/[0.06] text-[#F1F5F9] rounded-[14px] flex flex-col overflow-hidden p-6">
-            <div className="flex-shrink-0 pb-2">
-              <DialogHeader>
-                <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">{isManager ? "Assign New Task" : "Create New Task"}</DialogTitle>
-                <DialogDescription className="text-[13px] text-[#64748B]">{isManager ? "Assign a task to team members." : "Create a new task."}</DialogDescription>
-              </DialogHeader>
-            </div>
-            <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden py-2 space-y-4">
-              <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Title</Label><Input value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} placeholder="Task title" className="w-full box-border bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px] h-10 text-[14px]" /></div>
-              <div className="grid gap-1.5">
-                <Label className="text-[13px] text-[#CBD5E1]">
-                  Description <span className="text-red-400">*</span>
-                </Label>
-                <Textarea
-                  value={newTask.description}
-                  onChange={(e) => {
-                    setNewTask({ ...newTask, description: e.target.value })
-                    if (e.target.value.trim()) setDescriptionError(false)
-                  }}
-                  placeholder="Task description (required)"
-                  className={`bg-[#0B0F1A] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px] text-[14px] border transition-colors ${
-                    descriptionError
-                      ? "border-red-500/60 focus-visible:ring-red-500/20"
-                      : "border-white/[0.08]"
-                  }`}
-                  rows={2}
-                />
-                {descriptionError && (
-                  <p className="text-[12px] text-red-400 mt-0.5">Description is required.</p>
-                )}
+            <DialogContent className="sm:max-w-[560px] max-h-[90vh] bg-white dark:bg-[#121826] border-slate-200 dark:border-white/[0.06] text-slate-900 dark:text-[#F1F5F9] rounded-[16px] shadow-2xl flex flex-col overflow-hidden p-6">
+              <div className="flex-shrink-0 pb-3">
+                <DialogHeader>
+                  <DialogTitle className="text-[18px] font-bold text-slate-900 dark:text-[#F1F5F9]">
+                    {isManager ? "Assign New Task" : "Create New Task"}
+                  </DialogTitle>
+                  <DialogDescription className="text-[13px] text-slate-500 dark:text-[#64748B]">
+                    {isManager ? "Assign a task to team members." : "Create a new task."}
+                  </DialogDescription>
+                </DialogHeader>
               </div>
 
-              {/* Two-column: Priority + Assign To + Due Date + Due Time */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Priority</Label><Select value={newTask.priority} onValueChange={(v: any) => setNewTask({ ...newTask, priority: v })}><SelectTrigger className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] h-10 text-[14px]"><SelectValue /></SelectTrigger><SelectContent className="bg-[#121826] border-white/[0.08]"><SelectItem value="low">Low</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="urgent">Urgent</SelectItem></SelectContent></Select></div>
-                <div className="grid gap-1.5">
-                  <Label className="text-[13px] text-[#CBD5E1]">Due Date <span className="text-red-400">*</span></Label>
+              <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden py-2 pl-2 pr-3 sm:pr-4 space-y-4">
+                {/* Title */}
+                <div id="task-form-title" className="grid gap-1.5">
+                  <Label className="text-[13px] font-medium text-slate-700 dark:text-[#CBD5E1]">
+                    Title
+                  </Label>
                   <Input
-                    type="date"
-                    min={todayStr}
-                    value={newTask.dueDate}
+                    value={newTask.title}
                     onChange={(e) => {
-                      setNewTask({ ...newTask, dueDate: e.target.value, dueTime: "" })
-                      setDueDateError(false)
-                      setDueTimeError(false)
-                      setPastDatetimeError(false)
+                      setNewTask({ ...newTask, title: e.target.value })
+                      if (e.target.value.trim()) setTitleError(false)
                     }}
-                    className={`bg-[#0B0F1A] text-[#F1F5F9] rounded-[10px] h-10 text-[14px] color-scheme-dark transition-colors ${dueDateError ? 'border-red-500/60' : 'border-white/[0.08]'}`}
+                    placeholder="Task title"
+                    className={`w-full box-border bg-slate-50 dark:bg-[#0B0F1A] text-slate-900 dark:text-[#F1F5F9] placeholder:text-slate-400 dark:placeholder:text-[#475569] rounded-[10px] h-10 text-[14px] transition-colors ${titleError ? "border-red-500 focus-visible:ring-red-500/20" : "border-slate-200 dark:border-white/[0.08]"
+                      }`}
                   />
-                  {dueDateError && (
-                    <p className="text-[12px] text-red-400 mt-0.5">Due date is required.</p>
+                  {titleError && (
+                    <p className="text-[12px] text-red-500 dark:text-red-400 mt-0.5">Please fill in the required field.</p>
                   )}
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+
+                {/* Description */}
+                <div id="task-form-description" className="grid gap-1.5">
+                  <Label className="text-[13px] font-medium text-slate-700 dark:text-[#CBD5E1]">
+                    Description <span className="text-red-500 dark:text-red-400">*</span>
+                  </Label>
+                  <Textarea
+                    value={newTask.description}
+                    onChange={(e) => {
+                      setNewTask({ ...newTask, description: e.target.value })
+                      if (e.target.value.trim()) setDescriptionError(false)
+                    }}
+                    placeholder="Task description (required)"
+                    className={`bg-slate-50 dark:bg-[#0B0F1A] text-slate-900 dark:text-[#F1F5F9] placeholder:text-slate-400 dark:placeholder:text-[#475569] rounded-[10px] text-[14px] border transition-colors ${descriptionError
+                        ? "border-red-500 focus-visible:ring-red-500/20"
+                        : "border-slate-200 dark:border-white/[0.08]"
+                      }`}
+                    rows={3}
+                  />
+                  {descriptionError && (
+                    <p className="text-[12px] text-red-500 dark:text-red-400 mt-0.5">Please fill in the required field.</p>
+                  )}
+                </div>
+
+                {/* Manager vs Employee Grid Layout */}
                 {isManager ? (
-                  <div className="grid gap-1.5">
-                    <Label className="text-[13px] text-[#CBD5E1]">
-                      Assign To <span className="text-red-400">*</span>
-                    </Label>
-                    <div className={`rounded-[10px] bg-[#0B0F1A] border px-3 py-2 space-y-2 transition-colors ${
-                      assigneeError ? "border-red-500/60" : "border-white/[0.08]"
-                    }`}>
-                      <Select value="placeholder" onValueChange={(v) => { if (!newTask.assigneeIds.includes(v)) { setNewTask({ ...newTask, assigneeIds: [...newTask.assigneeIds, v] }); setAssigneeError(false) } }}><SelectTrigger className="bg-transparent border-0 p-0 h-auto text-[#F1F5F9] rounded-none shadow-none ring-0 focus:ring-0 data-[placeholder]:text-[#475569] text-[14px]"><SelectValue placeholder="Select users" /></SelectTrigger><SelectContent className="bg-[#121826] border-white/[0.08]"><SelectItem value={user!.id}>Myself</SelectItem>{users.filter(u => u.uid !== user?.id && !newTask.assigneeIds.includes(u.uid)).map(u => (<SelectItem key={u.uid} value={u.uid}>{u.name}</SelectItem>))}</SelectContent></Select>
-                      {newTask.assigneeIds.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 min-w-0">
-                          {newTask.assigneeIds.map(id => { const name = id === user?.id ? "You" : users.find(u => u.uid === id)?.name || "Unknown"; return (<span key={id} className="inline-flex items-center gap-1 rounded-full bg-[#3B82F6]/[0.12] text-[#93C5FD] px-2.5 py-0.5 text-[11px] font-medium max-w-full"><UserCircle2 className="h-3 w-3 flex-shrink-0" /><span className="truncate">{name}</span><button onClick={() => setNewTask({ ...newTask, assigneeIds: newTask.assigneeIds.filter(aid => aid !== id) })} className="ml-0.5 hover:text-[#FCA5A5] flex-shrink-0"><X className="h-3 w-3" /></button></span>) })}
-                        </div>
-                      )}
+                  <>
+                    {/* Priority + Due Date */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div id="task-form-priority" className="grid gap-1.5">
+                        <Label className="text-[13px] font-medium text-slate-700 dark:text-[#CBD5E1]">Priority</Label>
+                        <Select value={newTask.priority} onValueChange={(v: any) => setNewTask({ ...newTask, priority: v })}>
+                          <SelectTrigger className="bg-slate-50 dark:bg-[#0B0F1A] border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-[#F1F5F9] rounded-[10px] h-10 text-[14px]">
+                            <SelectValue placeholder="Medium" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white dark:bg-[#121826] border-slate-200 dark:border-white/[0.08]">
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="urgent">Urgent</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div id="task-form-due-date" className="grid gap-1.5">
+                        <Label className="text-[13px] font-medium text-slate-700 dark:text-[#CBD5E1]">
+                          Due Date <span className="text-red-500 dark:text-red-400">*</span>
+                        </Label>
+                        <Input
+                          type="date"
+                          min={todayStr}
+                          value={newTask.dueDate}
+                          onChange={(e) => {
+                            setNewTask({ ...newTask, dueDate: e.target.value, dueTime: "" })
+                            setDueDateError(false)
+                            setDueTimeError(false)
+                            setPastDatetimeError(false)
+                          }}
+                          className={`bg-slate-50 dark:bg-[#0B0F1A] text-slate-900 dark:text-[#F1F5F9] rounded-[10px] h-10 text-[14px] transition-colors ${dueDateError ? "border-red-500" : "border-slate-200 dark:border-white/[0.08]"
+                            }`}
+                        />
+                        {dueDateError && (
+                          <p className="text-[12px] text-red-500 dark:text-red-400 mt-0.5">Please fill in the required field.</p>
+                        )}
+                      </div>
                     </div>
-                    {assigneeError && (
-                      <p className="text-[12px] text-red-400 mt-0.5">Please assign this task to at least one person.</p>
-                    )}
+
+                    {/* Assign To + Due Time */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div id="task-form-assignee" className="grid gap-1.5">
+                        <Label className="text-[13px] font-medium text-slate-700 dark:text-[#CBD5E1]">
+                          Assign To <span className="text-red-500 dark:text-red-400">*</span>
+                        </Label>
+                        <div className={`rounded-[10px] bg-slate-50 dark:bg-[#0B0F1A] border px-3 py-2 transition-colors min-h-[40px] flex items-center ${assigneeError ? "border-red-500" : "border-slate-200 dark:border-white/[0.08]"
+                          }`}>
+                          <Select
+                            value="placeholder"
+                            onValueChange={(v) => {
+                              if (!newTask.assigneeIds.includes(v)) {
+                                setNewTask({ ...newTask, assigneeIds: [...newTask.assigneeIds, v] })
+                                setAssigneeError(false)
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="bg-transparent border-0 p-0 h-auto text-slate-900 dark:text-[#F1F5F9] rounded-none shadow-none ring-0 focus:ring-0 text-[14px] w-full">
+                              {newTask.assigneeIds.length === 0 ? (
+                                <span className="text-slate-400 dark:text-[#475569]">Select team member</span>
+                              ) : (
+                                <div className="flex flex-wrap gap-1.5 min-w-0 pr-2 py-0.5">
+                                  {newTask.assigneeIds.map(id => {
+                                    const name = id === user?.id ? "You" : users.find(u => u.uid === id)?.name || "Unknown";
+                                    return (
+                                        <span key={id} className="inline-flex items-center gap-1 rounded-full bg-blue-100 dark:bg-[#3B82F6]/[0.12] text-blue-700 dark:text-[#93C5FD] px-2.5 py-0.5 text-[11px] font-medium max-w-full" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+                                          <UserCircle2 className="h-3 w-3 flex-shrink-0" />
+                                          <span className="truncate">{name}</span>
+                                          <button
+                                            type="button"
+                                            onPointerDown={(e) => e.stopPropagation()}
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                            onClick={(e) => {
+                                              e.preventDefault()
+                                              e.stopPropagation()
+                                              setNewTask(prev => ({ ...prev, assigneeIds: prev.assigneeIds.filter(aid => aid !== id) }))
+                                            }}
+                                            className="ml-0.5 hover:text-red-500 flex-shrink-0"
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </button>
+                                        </span>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </SelectTrigger>
+                            <SelectContent className="bg-white dark:bg-[#121826] border-slate-200 dark:border-white/[0.08]">
+                              <SelectItem value={user!.id}>Myself</SelectItem>
+                              {users.filter(u => u.uid !== user?.id && !newTask.assigneeIds.includes(u.uid)).map(u => (
+                                <SelectItem key={u.uid} value={u.uid}>{u.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {assigneeError && (
+                          <p className="text-[12px] text-red-500 dark:text-red-400 mt-0.5">Please fill in the required field.</p>
+                        )}
+                      </div>
+
+                      <div id="task-form-due-time" className="grid gap-1.5">
+                        <Label className="text-[13px] font-medium text-slate-700 dark:text-[#CBD5E1]">
+                          Due Time <span className="text-red-500 dark:text-red-400">*</span>
+                        </Label>
+                        <Input
+                          type="time"
+                          min={newTask.dueDate === todayStr ? nowTimeStr : undefined}
+                          value={newTask.dueTime}
+                          onChange={(e) => { setNewTask({ ...newTask, dueTime: e.target.value }); setDueTimeError(false); setPastDatetimeError(false) }}
+                          className={`bg-slate-50 dark:bg-[#0B0F1A] text-slate-900 dark:text-[#F1F5F9] rounded-[10px] h-10 text-[14px] transition-colors ${dueTimeError ? "border-red-500" : "border-slate-200 dark:border-white/[0.08]"
+                            }`}
+                        />
+                        {dueTimeError && (
+                          <p className="text-[12px] text-red-500 dark:text-red-400 mt-0.5">Please fill in the required field.</p>
+                        )}
+                        {pastDatetimeError && (
+                          <p className="text-[12px] text-red-500 dark:text-red-400 mt-0.5">Due date and time cannot be in the past.</p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Priority (Full Width for Employee) */}
+                    <div id="task-form-priority" className="grid gap-1.5">
+                      <Label className="text-[13px] font-medium text-slate-700 dark:text-[#CBD5E1]">Priority</Label>
+                      <Select value={newTask.priority} onValueChange={(v: any) => setNewTask({ ...newTask, priority: v })}>
+                        <SelectTrigger className="bg-slate-50 dark:bg-[#0B0F1A] border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-[#F1F5F9] rounded-[10px] h-10 text-[14px]">
+                          <SelectValue placeholder="Medium" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-[#121826] border-slate-200 dark:border-white/[0.08]">
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="urgent">Urgent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Due Date + Due Time (Side-by-Side for Employee) */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div id="task-form-due-date" className="grid gap-1.5">
+                        <Label className="text-[13px] font-medium text-slate-700 dark:text-[#CBD5E1]">
+                          Due Date <span className="text-red-500 dark:text-red-400">*</span>
+                        </Label>
+                        <Input
+                          type="date"
+                          min={todayStr}
+                          value={newTask.dueDate}
+                          onChange={(e) => {
+                            setNewTask({ ...newTask, dueDate: e.target.value, dueTime: "" })
+                            setDueDateError(false)
+                            setDueTimeError(false)
+                            setPastDatetimeError(false)
+                          }}
+                          className={`bg-slate-50 dark:bg-[#0B0F1A] text-slate-900 dark:text-[#F1F5F9] rounded-[10px] h-10 text-[14px] transition-colors ${dueDateError ? "border-red-500" : "border-slate-200 dark:border-white/[0.08]"
+                            }`}
+                        />
+                        {dueDateError && (
+                          <p className="text-[12px] text-red-500 dark:text-red-400 mt-0.5">Please fill in the required field.</p>
+                        )}
+                      </div>
+
+                      <div id="task-form-due-time" className="grid gap-1.5">
+                        <Label className="text-[13px] font-medium text-slate-700 dark:text-[#CBD5E1]">
+                          Due Time <span className="text-red-500 dark:text-red-400">*</span>
+                        </Label>
+                        <Input
+                          type="time"
+                          min={newTask.dueDate === todayStr ? nowTimeStr : undefined}
+                          value={newTask.dueTime}
+                          onChange={(e) => { setNewTask({ ...newTask, dueTime: e.target.value }); setDueTimeError(false); setPastDatetimeError(false) }}
+                          className={`bg-slate-50 dark:bg-[#0B0F1A] text-slate-900 dark:text-[#F1F5F9] rounded-[10px] h-10 text-[14px] transition-colors ${dueTimeError ? "border-red-500" : "border-slate-200 dark:border-white/[0.08]"
+                            }`}
+                        />
+                        {dueTimeError && (
+                          <p className="text-[12px] text-red-500 dark:text-red-400 mt-0.5">Please fill in the required field.</p>
+                        )}
+                        {pastDatetimeError && (
+                          <p className="text-[12px] text-red-500 dark:text-red-400 mt-0.5">Due date and time cannot be in the past.</p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Can View Progress (Optional) */}
+                {isManager && (
+                  <div id="task-form-viewers" className="grid gap-1.5">
+                    <Label className="text-[13px] font-medium text-slate-700 dark:text-[#CBD5E1]">Can View Progress (Optional)</Label>
+                    <div className="rounded-[10px] bg-slate-50 dark:bg-[#0B0F1A] border border-slate-200 dark:border-white/[0.08] px-3 py-2 min-h-[40px] flex items-center">
+                      <Select value="placeholder" onValueChange={(v) => { if (!newTask.viewerIds.includes(v) && !newTask.assigneeIds.includes(v)) setNewTask({ ...newTask, viewerIds: [...newTask.viewerIds, v] }) }}>
+                        <SelectTrigger className="bg-transparent border-0 p-0 h-auto text-slate-900 dark:text-[#F1F5F9] rounded-none shadow-none ring-0 focus:ring-0 text-[14px] w-full">
+                          {newTask.viewerIds.length === 0 ? (
+                            <span className="text-slate-400 dark:text-[#475569]">Select who can view progress</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5 min-w-0 pr-2 py-0.5">
+                              {newTask.viewerIds.map(id => {
+                                const name = users.find(u => u.uid === id)?.name || "Unknown";
+                                return (
+                                  <span key={id} className="inline-flex items-center gap-1 rounded-full bg-slate-200 dark:bg-white/[0.06] text-slate-700 dark:text-[#94A3B8] px-2.5 py-0.5 text-[11px] font-medium max-w-full" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+                                    <UserCircle2 className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">{name}</span>
+                                    <button
+                                      type="button"
+                                      onPointerDown={(e) => e.stopPropagation()}
+                                      onMouseDown={(e) => e.stopPropagation()}
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        setNewTask(prev => ({ ...prev, viewerIds: prev.viewerIds.filter(vid => vid !== id) }))
+                                      }}
+                                      className="ml-0.5 hover:text-red-500 flex-shrink-0"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </span>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-[#121826] border-slate-200 dark:border-white/[0.08]">
+                          {users.filter(u => !newTask.viewerIds.includes(u.uid) && !newTask.assigneeIds.includes(u.uid)).map(u => (
+                            <SelectItem key={u.uid} value={u.uid}>{u.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                ) : (<div />)}
-                <div className="grid gap-1.5">
-                  <Label className="text-[13px] text-[#CBD5E1]">Due Time <span className="text-red-400">*</span></Label>
-                  <Input
-                    type="time"
-                    min={newTask.dueDate === todayStr ? nowTimeStr : undefined}
-                    value={newTask.dueTime}
-                    onChange={(e) => { setNewTask({ ...newTask, dueTime: e.target.value }); setDueTimeError(false); setPastDatetimeError(false) }}
-                    className={`bg-[#0B0F1A] text-[#F1F5F9] rounded-[10px] h-10 text-[14px] color-scheme-dark transition-colors ${dueTimeError ? 'border-red-500/60' : 'border-white/[0.08]'}`}
-                  />
-                  {dueTimeError && (
-                    <p className="text-[12px] text-red-400 mt-0.5">Due time is required.</p>
-                  )}
-                  {pastDatetimeError && (
-                    <p className="text-[12px] text-red-400 mt-0.5">Due date and time cannot be in the past.</p>
-                  )}
-                </div>
-              </div>
-              {isManager && (
-                <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Can View Progress (Optional)</Label>
-                  <div className="rounded-[10px] bg-[#0B0F1A] border border-white/[0.08] px-3 py-2 space-y-2">
-                    <Select value="placeholder" onValueChange={(v) => { if (!newTask.viewerIds.includes(v) && !newTask.assigneeIds.includes(v)) setNewTask({ ...newTask, viewerIds: [...newTask.viewerIds, v] }) }}><SelectTrigger className="bg-transparent border-0 p-0 h-auto text-[#F1F5F9] rounded-none shadow-none ring-0 focus:ring-0 data-[placeholder]:text-[#475569] text-[14px]"><SelectValue placeholder="Select viewers" /></SelectTrigger><SelectContent className="bg-[#121826] border-white/[0.08]">{users.filter(u => !newTask.viewerIds.includes(u.uid) && !newTask.assigneeIds.includes(u.uid)).map(u => (<SelectItem key={u.uid} value={u.uid}>{u.name}</SelectItem>))}</SelectContent></Select>
-                    {newTask.viewerIds.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 min-w-0">
-                        {newTask.viewerIds.map(id => { const name = users.find(u => u.uid === id)?.name || "Unknown"; return (<span key={id} className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] text-[#94A3B8] px-2.5 py-0.5 text-[11px] font-medium max-w-full"><UserCircle2 className="h-3 w-3 flex-shrink-0" /><span className="truncate">{name}</span><button onClick={() => setNewTask({ ...newTask, viewerIds: newTask.viewerIds.filter(vid => vid !== id) })} className="ml-0.5 hover:text-[#FCA5A5] flex-shrink-0"><X className="h-3 w-3" /></button></span>) })}
+                )}
+
+                {/* Checkbox Section */}
+                {isManager && (
+                  <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0F1523]/60 p-3.5 space-y-3.5 box-border w-full">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newTask.useMilestones}
+                        onChange={(e) =>
+                          setNewTask({
+                            ...newTask,
+                            useMilestones: e.target.checked,
+                            milestones: e.target.checked ? [{ title: "", description: "", dueDate: "", dueTime: "" }] : []
+                          })
+                        }
+                        className="mt-1 rounded accent-[#3B82F6] h-4 w-4"
+                      />
+                      <div>
+                        <div className="text-[14px] font-semibold text-slate-900 dark:text-[#F1F5F9]">
+                          Break this task into milestones?
+                        </div>
+                        <div className="text-[12px] text-slate-500 dark:text-[#64748B] mt-0.5">
+                          Split the task into smaller, trackable steps.
+                        </div>
+                      </div>
+                    </label>
+
+                    {/* Expanded MILESTONES Section */}
+                    {newTask.useMilestones && (
+                      <div id="task-form-milestones-container" className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white/70 dark:bg-[#0B0F1A]/60 p-3.5 space-y-3.5 box-border w-full">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-[13px] font-bold tracking-wider uppercase text-slate-900 dark:text-white">
+                            <CheckSquare className="h-4 w-4 text-[#3B82F6]" />
+                            MILESTONES
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[12px] text-blue-600 dark:text-[#60A5FA]">
+                            <Info className="h-3.5 w-3.5 flex-shrink-0" />
+                            <span>All fields below are required for each milestone.</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3 w-full">
+                          {newTask.milestones.map((m, i) => (
+                            <div
+                              key={i}
+                              id={`task-form-milestone-${i}`}
+                              className="rounded-lg border border-slate-200 dark:border-white/[0.08] bg-slate-50/50 dark:bg-[#0B0F1A] p-3 space-y-2.5 relative box-border w-full min-w-0"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span className="w-6 h-6 rounded-full bg-[#3B82F6] text-white text-[12px] font-bold flex items-center justify-center flex-shrink-0">
+                                  {i + 1}
+                                </span>
+                                <div id={`task-form-milestone-${i}-title`} className="flex-1 min-w-0">
+                                  <Input
+                                    placeholder={`Milestone ${i + 1} title *`}
+                                    value={m.title}
+                                    onChange={(e) => {
+                                      const ms = [...newTask.milestones]
+                                      ms[i] = { ...ms[i], title: e.target.value }
+                                      setNewTask({ ...newTask, milestones: ms })
+                                      if (e.target.value.trim()) {
+                                        setMilestoneErrors(prev => ({ ...prev, [i]: { ...prev[i], title: false } }))
+                                      }
+                                    }}
+                                    className={`h-9 text-[13px] bg-white dark:bg-[#121826] text-slate-900 dark:text-[#F1F5F9] placeholder:text-slate-400 dark:placeholder:text-[#475569] rounded-[8px] flex-1 min-w-0 box-border transition-colors ${milestoneErrors[i]?.title ? "border-red-500" : "border-slate-200 dark:border-white/[0.08]"
+                                      }`}
+                                  />
+                                  {milestoneErrors[i]?.title && (
+                                    <p className="text-[12px] text-red-500 dark:text-red-400 mt-0.5">Please fill in the required field.</p>
+                                  )}
+                                </div>
+                                {newTask.milestones.length > 1 && (
+                                  <button
+                                    onClick={() => {
+                                      const ms = newTask.milestones.filter((_, j) => j !== i)
+                                      setNewTask({ ...newTask, milestones: ms })
+                                    }}
+                                    className="text-slate-400 hover:text-red-500 p-1 flex-shrink-0 transition-colors"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
+
+                              <div id={`task-form-milestone-${i}-description`}>
+                                <Textarea
+                                  placeholder="Description *"
+                                  value={m.description || ""}
+                                  onChange={(e) => {
+                                    const ms = [...newTask.milestones]
+                                    ms[i] = { ...ms[i], description: e.target.value }
+                                    setNewTask({ ...newTask, milestones: ms })
+                                    if (e.target.value.trim()) {
+                                      setMilestoneErrors(prev => ({ ...prev, [i]: { ...prev[i], description: false } }))
+                                    }
+                                  }}
+                                  className={`text-[13px] bg-white dark:bg-[#121826] text-slate-900 dark:text-[#F1F5F9] placeholder:text-slate-400 dark:placeholder:text-[#475569] rounded-[8px] min-w-0 box-border w-full transition-colors ${milestoneErrors[i]?.description ? "border-red-500" : "border-slate-200 dark:border-white/[0.08]"
+                                    }`}
+                                  rows={2}
+                                />
+                                {milestoneErrors[i]?.description && (
+                                  <p className="text-[12px] text-red-500 dark:text-red-400 mt-0.5">Please fill in the required field.</p>
+                                )}
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3 pt-1">
+                                <div id={`task-form-milestone-${i}-dueDate`}>
+                                  <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8] mb-1 block">
+                                    DUE DATE <span className="text-red-500 dark:text-red-400">*</span>
+                                  </Label>
+                                  <Input
+                                    type="date"
+                                    min={todayStr}
+                                    value={m.dueDate || ""}
+                                    onChange={(e) => {
+                                      const ms = [...newTask.milestones]
+                                      ms[i] = { ...ms[i], dueDate: e.target.value, dueTime: "" }
+                                      setNewTask({ ...newTask, milestones: ms })
+                                      if (e.target.value) {
+                                        setMilestoneErrors(prev => ({ ...prev, [i]: { ...prev[i], dueDate: false } }))
+                                      }
+                                    }}
+                                    className={`h-9 text-[13px] bg-white dark:bg-[#121826] text-slate-900 dark:text-[#F1F5F9] rounded-[8px] min-w-0 box-border w-full transition-colors ${milestoneErrors[i]?.dueDate ? "border-red-500" : "border-slate-200 dark:border-white/[0.08]"
+                                      }`}
+                                  />
+                                  {milestoneErrors[i]?.dueDate && (
+                                    <p className="text-[12px] text-red-500 dark:text-red-400 mt-0.5">Please fill in the required field.</p>
+                                  )}
+                                </div>
+                                <div id={`task-form-milestone-${i}-dueTime`}>
+                                  <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8] mb-1 block">
+                                    DUE TIME <span className="text-red-500 dark:text-red-400">*</span>
+                                  </Label>
+                                  <Input
+                                    type="time"
+                                    min={m.dueDate === todayStr ? nowTimeStr : undefined}
+                                    value={m.dueTime || ""}
+                                    onChange={(e) => {
+                                      const ms = [...newTask.milestones]
+                                      ms[i] = { ...ms[i], dueTime: e.target.value }
+                                      setNewTask({ ...newTask, milestones: ms })
+                                      if (e.target.value) {
+                                        setMilestoneErrors(prev => ({ ...prev, [i]: { ...prev[i], dueTime: false, pastDatetime: false } }))
+                                      }
+                                    }}
+                                    className={`h-9 text-[13px] bg-white dark:bg-[#121826] text-slate-900 dark:text-[#F1F5F9] rounded-[8px] min-w-0 box-border w-full transition-colors ${milestoneErrors[i]?.dueTime || milestoneErrors[i]?.pastDatetime ? "border-red-500" : "border-slate-200 dark:border-white/[0.08]"
+                                      }`}
+                                  />
+                                  {milestoneErrors[i]?.dueTime && (
+                                    <p className="text-[12px] text-red-500 dark:text-red-400 mt-0.5">Please fill in the required field.</p>
+                                  )}
+                                  {milestoneErrors[i]?.pastDatetime && (
+                                    <p className="text-[12px] text-red-500 dark:text-red-400 mt-0.5">Due date and time cannot be in the past.</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setNewTask({
+                              ...newTask,
+                              milestones: [...newTask.milestones, { title: "", description: "", dueDate: "", dueTime: "" }]
+                            })
+                          }
+                          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#3B82F6] hover:text-[#2563EB] pt-1 transition-colors"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Milestone
+                        </button>
                       </div>
                     )}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              {/* Milestone builder section */}
-              {isManager && (
-                <div className="rounded-[10px] border border-white/[0.08] bg-[#0F1523] p-4 space-y-3">
-                  <label className="flex items-center gap-2 text-[13px] font-medium text-[#CBD5E1] cursor-pointer">
-                    <input type="checkbox" checked={newTask.useMilestones} onChange={(e) => setNewTask({ ...newTask, useMilestones: e.target.checked, milestones: e.target.checked ? [{ title: "", description: "", dueDate: "", dueTime: "" }] : [] })} className="rounded accent-[#3B82F6]" />
-                    Break this task into milestones?
-                  </label>
-                  {newTask.useMilestones && (
-                    <div className="space-y-2">
-                      {newTask.milestones.map((m, i) => (
-                        <div key={i} className="flex items-start gap-2">
-                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#3B82F6]/[0.12] text-[#93C5FD] text-[11px] font-bold flex items-center justify-center mt-1.5">{i + 1}</span>
-                          <div className="flex-1 space-y-1.5">
-                            <Input placeholder={`Milestone ${i + 1} title`} value={m.title} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], title: e.target.value }; setNewTask({ ...newTask, milestones: ms }) }} className="h-8 text-[13px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px]" />
-                            <Input placeholder="Description" value={m.description || ""} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], description: e.target.value }; setNewTask({ ...newTask, milestones: ms }) }} className="h-7 text-[12px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px]" />
-                            <div className="flex gap-2">
-                              <Input type="date" min={todayStr} value={m.dueDate || ""} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], dueDate: e.target.value, dueTime: "" }; setNewTask({ ...newTask, milestones: ms }) }} className="h-7 text-[12px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] color-scheme-dark" placeholder="Due date" />
-                              <Input type="time" min={m.dueDate === todayStr ? nowTimeStr : undefined} value={m.dueTime || ""} onChange={(e) => { const ms = [...newTask.milestones]; ms[i] = { ...ms[i], dueTime: e.target.value }; setNewTask({ ...newTask, milestones: ms }) }} className="h-7 text-[12px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] color-scheme-dark" placeholder="Due time" />
-                            </div>
-                          </div>
-                          {newTask.milestones.length > 1 && (
-                            <button onClick={() => { const ms = newTask.milestones.filter((_, j) => j !== i); setNewTask({ ...newTask, milestones: ms }) }} className="pt-1.5 text-[#64748B] hover:text-[#EF4444]"><X className="h-4 w-4" /></button>
-                          )}
-                        </div>
-                      ))}
-                      <TaskButtonGhost onClick={() => setNewTask({ ...newTask, milestones: [...newTask.milestones, { title: "", description: "", dueDate: "", dueTime: "" }] })}><Plus className="h-3 w-3" />Add Milestone</TaskButtonGhost>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="flex-shrink-0 border-t border-white/[0.06] pt-3">
-              <DialogFooter><TaskButton onClick={handleCreateTask} disabled={!newTask.title.trim() || isAddingTask || (newTask.useMilestones && newTask.milestones.some(m => !m.title.trim() || !m.description.trim() || !m.dueDate || !m.dueTime))}>{isAddingTask ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}{isManager ? "Assign Task" : "Create Task"}</TaskButton></DialogFooter>
-            </div>
-          </DialogContent>
-        </Dialog>
+              {/* Footer */}
+              <div className="flex-shrink-0 border-t border-slate-200 dark:border-white/[0.06] pt-4 mt-2 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsTaskDialogOpen(false)}
+                  className="px-4 py-2 text-[13px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 rounded-[8px] border border-slate-200 dark:border-white/10 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateTask}
+                  disabled={isAddingTask}
+                  className="px-4 py-2 text-[13px] font-medium bg-[#3B82F6] hover:bg-[#2563EB] text-white rounded-[8px] inline-flex items-center gap-1.5 shadow-sm disabled:opacity-50 transition-colors"
+                >
+                  {isAddingTask ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  {isManager ? "Assign Task" : "Create Task"}
+                </button>
+              </div>
+            </DialogContent>
+          </Dialog>
         }
       />
 
@@ -1076,16 +1521,16 @@ export default function TasksPage() {
                         {canInteractWithTask(task) && isAssignee(task) && task.status === "in_progress" && (
                           isPhased
                             ? (allMilestonesDone && (
-                                <TaskButton variant="primary" onClick={() => openReviewDialog(task.id)} disabled={isLocked} className="whitespace-nowrap">{isLocked ? <Lock className="h-3.5 w-3.5 mr-1" /> : <Send className="h-3.5 w-3.5" />}Submit for Review</TaskButton>
-                              ))
+                              <TaskButton variant="primary" onClick={() => openReviewDialog(task.id)} disabled={isLocked} className="whitespace-nowrap">{isLocked ? <Lock className="h-3.5 w-3.5 mr-1" /> : <Send className="h-3.5 w-3.5" />}Submit for Review</TaskButton>
+                            ))
                             : (
-                                <TaskButton variant="primary" onClick={() => openReviewDialog(task.id)} disabled={isLocked} className="whitespace-nowrap">{isLocked ? <Lock className="h-3.5 w-3.5 mr-1" /> : <Send className="h-3.5 w-3.5" />}Submit for Review</TaskButton>
-                              )
+                              <TaskButton variant="primary" onClick={() => openReviewDialog(task.id)} disabled={isLocked} className="whitespace-nowrap">{isLocked ? <Lock className="h-3.5 w-3.5 mr-1" /> : <Send className="h-3.5 w-3.5" />}Submit for Review</TaskButton>
+                            )
                         )}
                         {canInteractWithTask(task) && isAssigner(task) && pastDue && !isPhased && (
-                          <TaskButton 
-                            variant={task.allowLateSubmission ? "primary" : "secondary"} 
-                            onClick={() => handleToggleLateSubmission(task.id, !task.allowLateSubmission, false)} 
+                          <TaskButton
+                            variant={task.allowLateSubmission ? "primary" : "secondary"}
+                            onClick={() => handleToggleLateSubmission(task.id, !task.allowLateSubmission, false)}
                             className="whitespace-nowrap"
                           >
                             {task.allowLateSubmission ? <Unlock className="h-3.5 w-3.5 mr-1" /> : <Lock className="h-3.5 w-3.5 mr-1" />}
@@ -1110,113 +1555,219 @@ export default function TasksPage() {
 
       {/* ===== VIEW DETAILS MODAL ===== */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto bg-[#121826] border-white/[0.06] text-[#F1F5F9] rounded-[14px]">
+        <DialogContent className="sm:max-w-[540px] max-h-[88vh] bg-white dark:bg-[#121826] border-slate-200 dark:border-white/[0.06] text-slate-900 dark:text-[#F1F5F9] rounded-[18px] shadow-2xl flex flex-col overflow-hidden p-6">
           {detailTask && (
             <>
-              <DialogHeader>
-                <div className="flex items-center gap-2 mb-1"><StatusPill status={detailTask.status} /><PriorityPill priority={detailTask.priority} /></div>
-                <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">{detailTask.title}</DialogTitle>
-                <DialogDescription className="text-[13px] text-[#64748B]">{detailTask.description}</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
-                {/* Progress card */}
-                <div className="flex items-center gap-4 p-4 rounded-[12px] bg-[#0F1523] border border-white/[0.04]">
+              {/* Header */}
+              <div className="flex-shrink-0 pb-2">
+                <DialogHeader>
+                  <div className="flex items-center gap-2 mb-1">
+                    <StatusPill status={detailTask.status} />
+                    <PriorityPill priority={detailTask.priority} />
+                  </div>
+                  <DialogTitle className="text-[20px] font-bold text-slate-900 dark:text-[#F1F5F9]">
+                    {detailTask.title}
+                  </DialogTitle>
+                  <DialogDescription className="text-[13px] text-slate-500 dark:text-[#64748B]">
+                    {detailTask.description}
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+
+              {/* Body Content */}
+              <div className="flex-1 min-h-0 min-w-0 overflow-y-auto space-y-4 py-2 pr-1">
+                {/* Progress Card */}
+                <div className="flex items-center gap-4 p-4 rounded-[14px] bg-slate-50 dark:bg-[#0B0F1A]/80 border border-slate-200 dark:border-white/[0.06]">
                   <ProgressRing progress={detailTask.progress} status={detailTask.status} />
-                  <div className="text-[13px]">
-                    <p className="font-medium text-[#F1F5F9]">Progress</p>
-                    <p className="text-[#94A3B8] text-[12px]">{isAssignee(detailTask) ? "Assigned to you" : `Assigned to ${getAssigneeName(detailTask)}`}</p>
-                    {detailTask.dueDatetime && <p className="text-[#64748B] text-[12px]">Due {getDueDisplay(detailTask)}</p>}
+                  <div className="text-[13px] space-y-1">
+                    <p className="font-bold text-slate-900 dark:text-[#F1F5F9] text-[15px]">Progress</p>
+                    <p className="text-slate-600 dark:text-[#94A3B8] text-[12px] flex items-center gap-1.5">
+                      <UserCircle2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                      {isAssignee(detailTask) ? "Assigned to you" : `Assigned to ${getAssigneeName(detailTask)}`}
+                    </p>
+                    {detailTask.dueDatetime && (
+                      <p className="text-red-600 dark:text-[#F87171] text-[12px] flex items-center gap-1.5 font-medium">
+                        <CalendarIcon className="h-3.5 w-3.5 text-red-500" />
+                        Due {getDueDisplay(detailTask)}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {/* Milestone stepper */}
+                {/* Milestones Section */}
                 {(milestones.length > 0 || detailTask?.isPhased) && (
-                  <div className="space-y-2">
+                  <div className="space-y-3 pt-1">
                     <div className="flex items-center justify-between">
-                      <p className="text-[12px] font-semibold text-[#64748B] flex items-center gap-1.5"><ListChecks className="h-3.5 w-3.5" />Milestones</p>
-                      {isAssigner(detailTask) && (
-                        <TaskButtonGhost onClick={openManageMilestones}>Manage</TaskButtonGhost>
-                      )}
+                      <div className="flex items-center gap-2 text-[13px] font-bold tracking-wider uppercase text-slate-900 dark:text-white">
+                        <CheckSquare className="h-4 w-4 text-[#3B82F6]" />
+                        <span>MILESTONES ({milestones.filter((m: any) => m.status === "approved").length}/{milestones.length})</span>
+                      </div>
+                      {isAssigner(detailTask) && (() => {
+                        const isTaskInReview = detailTask?.status === "pending_review" || milestones.some((m: any) => m.status === "pending_review")
+                        return (
+                          <button
+                            type="button"
+                            disabled={isTaskInReview}
+                            onClick={openManageMilestones}
+                            title={isTaskInReview ? "Cannot manage milestones while in review" : "Manage Milestones"}
+                            className="inline-flex items-center gap-1.5 text-[12px] font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-3 py-1 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
+                          >
+                            <Pencil className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+                            Manage
+                          </button>
+                        )
+                      })()}
                     </div>
-                    <div className="space-y-1.5">
+
+                    <div className="space-y-3">
                       {milestones.sort((a: any, b: any) => a.order_index - b.order_index).map((m: any, i: number) => {
                         const isApproved = m.status === "approved"
                         const isActionable = getNextActionableIndex(milestones) === m.order_index
                         const isLocked = !isApproved && !isActionable
                         const isAssign = detailTask.assigneeIds?.includes(user?.id)
                         const isAssgnr = detailTask.assignedBy === user?.id
-                        const canStart = isAssign && m.status === "not_started" && isActionable
                         const canSubmit = isAssign && m.status === "in_progress" && isActionable
                         const canReview = isAssgnr && m.status === "pending_review"
-                        const mPastDue = m.dueDate ? isPastDeadline(m.dueDate) : false
-                        const submissionLocked = mPastDue && !m.allowLateSubmission
+                        const mDateVal = m.dueDate || m.due_date || m.due_datetime || m.dueDatetime
+                        const mPastDue = mDateVal ? isPastDeadline(mDateVal) : false
+                        const allowLate = m.allowLateSubmission ?? m.allow_late_submission ?? m.submission_open ?? false
+                        const submissionLocked = mPastDue && !allowLate
                         const disableSubmit = submissionLocked
 
-                        const rowBg = isLocked ? "bg-[#0F1523]/50 opacity-50" : isActionable ? "bg-[#3B82F6]/[0.06] border-[#3B82F6]/20" : isApproved ? "bg-[#10B981]/[0.04] border-[#10B981]/20" : "bg-[#0F1523] border-white/[0.06]"
+                        const isPendingReview = m.status === "pending_review"
+
+                        const cardBorderBg = isApproved
+                          ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/40 dark:bg-[#0F172A]/70"
+                          : isPendingReview
+                          ? "border-amber-400/70 dark:border-amber-500/40 bg-amber-50/40 dark:bg-[#14120C]"
+                          : isActionable
+                          ? "border-blue-500/40 dark:border-blue-500/40 bg-blue-50/30 dark:bg-[#0F172A]"
+                          : "border-slate-200 dark:border-white/[0.06] bg-slate-50/60 dark:bg-[#0B0F1A]/50 opacity-60"
+
                         return (
-                          <div key={m.id}>
-                            <div
-                              className={`flex flex-col p-2.5 rounded-[10px] border ${rowBg} ${m.description ? "cursor-pointer" : ""}`}
-                              onClick={() => m.description ? setExpandedMilestoneId(expandedMilestoneId === m.id ? null : m.id) : null}
-                            >
-                            <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold ${isApproved ? "bg-[#10B981]/20 text-[#6EE7B7]" : isActionable ? "bg-[#3B82F6]/20 text-[#93C5FD]" : "bg-white/[0.06] text-[#64748B]"}`}>
-                                {isApproved ? <CheckCircle className="h-3 w-3" /> : (isLocked || submissionLocked) ? <Lock className="h-3 w-3" /> : i + 1}
+                          <div
+                            key={m.id}
+                            className={`rounded-[14px] border p-4 space-y-2.5 transition-colors ${cardBorderBg}`}
+                          >
+                            <div className="flex items-center justify-between min-w-0 gap-2">
+                              {/* Left: Number + Title */}
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-bold ${
+                                  isApproved
+                                    ? "bg-emerald-500 text-white"
+                                    : isActionable
+                                    ? "bg-[#3B82F6] text-white"
+                                    : "bg-slate-200 dark:bg-white/[0.08] text-slate-400"
+                                }`}>
+                                  {isApproved ? <CheckCircle className="h-3.5 w-3.5" /> : (isLocked || submissionLocked) ? <Lock className="h-3.5 w-3.5" /> : i + 1}
+                                </div>
+                                <span className={`text-[15px] font-bold truncate ${isLocked ? "text-slate-400 dark:text-slate-400" : "text-slate-900 dark:text-white"}`}>
+                                  {m.title}
+                                </span>
                               </div>
-                              <span className="truncate text-[13px] text-[#CBD5E1]">{m.title}</span>
-                              <MilestoneStatusBadge status={m.status} />
-                              {m.dueDate && (
-                                <span className="text-[11px] text-[#64748B]">{format(new Date(m.dueDate), "MMM d, h:mm a")}</span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                              {/* Assigner toggle for allow_late_submission */}
-                              {isAssgnr && mPastDue && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); handleToggleLateSubmission(m.id, !m.allowLateSubmission, true); }}
-                                  className={`p-1.5 rounded-[8px] transition-colors ${!m.allowLateSubmission ? 'text-[#FCA5A5] hover:bg-red-500/10' : 'text-[#6EE7B7] hover:bg-green-500/10'}`}
-                                  title={!m.allowLateSubmission ? "Allow Late Submission" : "Lock Late Submission"}
-                                >
-                                  {!m.allowLateSubmission ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
-                                </button>
-                              )}
-                              {canSubmit && disableSubmit && (
-                                <TaskButtonGhost disabled className="cursor-not-allowed opacity-40"><Lock className="h-3 w-3 mr-1" />Locked</TaskButtonGhost>
-                              )}
-                              {canSubmit && !disableSubmit && (
-                                <TaskButtonGhost onClick={() => openMilestoneDialog(m.id, "submit")} className="text-[#93C5FD]"><Send className="h-3 w-3 mr-1" />Submit</TaskButtonGhost>
-                              )}
-                              {canReview && <div className="flex gap-1"><TaskButtonGhost onClick={() => openMilestoneDialog(m.id, "approve")} className="text-[#6EE7B7]"><CheckCircle className="h-3 w-3" /></TaskButtonGhost><TaskButtonGhost onClick={() => openMilestoneDialog(m.id, "reject")} className="text-[#FCA5A5]"><X className="h-3 w-3" /></TaskButtonGhost></div>}
-                              {m.latestReview?.employee_file_url && (
-                                <button className="p-1 rounded-[8px] hover:bg-white/[0.06] transition-colors" title="Download employee file" onClick={() => downloadFile(m.latestReview.employee_file_url, m.latestReview.employee_file_name || "file")}><FileText className="h-3.5 w-3.5 text-[#93C5FD]" /></button>
-                              )}
-                              {m.latestReview?.reviewer_file_url && (
-                                <button className="p-1 rounded-[8px] hover:bg-white/[0.06] transition-colors" title="Download reviewer file" onClick={() => downloadFile(m.latestReview.reviewer_file_url, m.latestReview.reviewer_file_name || "file")}><FileText className="h-3.5 w-3.5 text-[#FBBF24]" /></button>
-                              )}
-                            </div>
-                            </div>
-                            {/* Chief sees employee's submission comment when reviewing */}
-                            {canReview && m.latestReview?.comment && (
-                              <div className="mt-2 pl-8 py-1.5 px-2 rounded-[8px] bg-[#3B82F6]/[0.06] text-[12px] text-[#94A3B8]">
-                                <span className="font-medium text-[#93C5FD]">Employee note: </span>
-                                {m.latestReview.comment}
+
+                              {/* Right: Deadline Badge + Status Badge */}
+                              <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+                                {mDateVal && (
+                                  <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full ${
+                                    isLocked 
+                                      ? "bg-slate-200/60 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400"
+                                      : "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20"
+                                  }`}>
+                                    <Clock className="h-3 w-3" />
+                                    {format(new Date(mDateVal), "MMM d, h:mm a")}
+                                  </span>
+                                )}
+
+                                <MilestoneStatusBadge status={m.status} />
                               </div>
+                            </div>
+
+                            {/* Clear Milestone Description - Always Visible */}
+                            {m.description && (
+                              <p className={`text-[13px] leading-relaxed pl-8 ${isLocked ? "text-slate-400 dark:text-slate-500" : "text-slate-600 dark:text-[#94A3B8]"}`}>
+                                {m.description}
+                              </p>
                             )}
-                            {/* Employee sees Chief's rejection feedback when milestone needs revision */}
-                            {m.status === "in_progress" && m.latestReview?.decision === "rejected" && m.latestReview?.comment && (
-                              <div className="mt-2 pl-8 py-1.5 px-2 rounded-[8px] bg-[#EF4444]/[0.06] text-[12px] text-[#94A3B8]">
-                                <span className="font-medium text-[#FCA5A5]">Reviewer feedback: </span>
-                                {m.latestReview.comment}
-                              </div>
-                            )}
-                          </div>
-                          {expandedMilestoneId === m.id && m.description && (
-                            <div className="px-2.5 pb-2.5 -mt-1">
-                              <div className="rounded-[10px] bg-[#0F1523] border border-white/[0.04] p-3 text-[13px] text-[#94A3B8] leading-relaxed">{m.description}</div>
-                            </div>
-                          )}
+
+                            {/* Action buttons (Assigner Lock/Unlock, See Review & Submit) placed at bottom right */}
+                            {(() => {
+                              const hasReview = !!(m.latestReview?.comment || m.latestReview?.reviewer_file_url || m.latestReview?.decision)
+                              const showAssignerLockBtn = isAssgnr && mPastDue && m.status !== "approved"
+
+                              if (!canSubmit && !hasReview && !showAssignerLockBtn) return null
+
+                              return (
+                                <div className="flex items-center justify-end gap-2 pt-1">
+                                  {/* Assigner Full Lock/Unlock Button */}
+                                  {showAssignerLockBtn && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); handleToggleLateSubmission(m.id, !allowLate, true); }}
+                                      className={`inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-[13px] font-semibold rounded-lg border shadow-sm transition-colors whitespace-nowrap ${
+                                        allowLate
+                                          ? 'text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-500/20 hover:bg-red-200 dark:hover:bg-red-500/30 border-red-300 dark:border-red-500/30'
+                                          : 'text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-500/20 hover:bg-emerald-200 dark:hover:bg-emerald-500/30 border-emerald-300 dark:border-emerald-500/30'
+                                      }`}
+                                      title={allowLate ? "Lock Late Submission" : "Allow Late Submission"}
+                                    >
+                                      {allowLate ? (
+                                        <>
+                                          <Lock className="h-3.5 w-3.5 flex-shrink-0" />
+                                          <span>Lock Submission</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Unlock className="h-3.5 w-3.5 flex-shrink-0" />
+                                          <span>Allow Late Submission</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  )}
+
+                                  {/* See Review Button */}
+                                  {hasReview && (
+                                    <button
+                                      type="button"
+                                      disabled={m.status === "pending_review"}
+                                      onClick={() => setViewingReviewMilestone(m)}
+                                      title={m.status === "pending_review" ? "Review is pending" : "See Review"}
+                                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-[13px] font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-white/[0.06] hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg transition-colors whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
+                                    >
+                                      {m.status === "pending_review" ? (
+                                        <Lock className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                                      ) : (
+                                        <Eye className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400 flex-shrink-0" />
+                                      )}
+                                      <span>See Review</span>
+                                    </button>
+                                  )}
+
+                                  {/* Submit / Locked Button */}
+                                  {canSubmit && (
+                                    disableSubmit ? (
+                                      <button
+                                        type="button"
+                                        disabled
+                                        className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-[13px] font-semibold text-white bg-[#3B82F6] opacity-40 cursor-not-allowed rounded-lg shadow-sm whitespace-nowrap"
+                                      >
+                                        <Lock className="h-3.5 w-3.5 flex-shrink-0" />
+                                        <span>Locked</span>
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => openMilestoneDialog(m.id, "submit")}
+                                        className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-[13px] font-semibold text-white bg-[#3B82F6] hover:bg-[#2563EB] rounded-lg shadow-sm transition-colors whitespace-nowrap"
+                                      >
+                                        <Send className="h-3.5 w-3.5 flex-shrink-0" />
+                                        <span>Submit</span>
+                                      </button>
+                                    )
+                                  )}
+                                </div>
+                              )
+                            })()}
                           </div>
                         )
                       })}
@@ -1226,165 +1777,370 @@ export default function TasksPage() {
 
                 {/* Assigner notes */}
                 {detailTask.reviewAssignerNotes && (
-                  <div className="p-3 rounded-[10px] bg-[#0F1523] border border-[#F59E0B]/20">
-                    <p className="text-[12px] font-medium text-[#FBBF24] mb-1 flex items-center gap-1"><MessageSquare className="h-3 w-3" />Assigner Notes</p>
-                    <p className="text-[13px] text-[#CBD5E1]">{detailTask.reviewAssignerNotes}</p>
+                  <div className="p-3 rounded-[12px] bg-amber-50 dark:bg-[#0F1523] border border-amber-200 dark:border-[#F59E0B]/20">
+                    <p className="text-[12px] font-medium text-amber-700 dark:text-[#FBBF24] mb-1 flex items-center gap-1"><MessageSquare className="h-3 w-3" />Assigner Notes</p>
+                    <p className="text-[13px] text-slate-700 dark:text-[#CBD5E1]">{detailTask.reviewAssignerNotes}</p>
                   </div>
                 )}
+
                 {/* Progress notes */}
                 {detailTask.reviewNotes && (
-                  <div className="p-3 rounded-[10px] bg-[#0F1523] border border-[#3B82F6]/20">
-                    <p className="text-[12px] font-medium text-[#93C5FD] mb-1 flex items-center gap-1"><MessageSquare className="h-3 w-3" />Notes from {getAssigneeName(detailTask)}</p>
-                    <p className="text-[13px] text-[#CBD5E1]">{detailTask.reviewNotes}</p>
+                  <div className="p-3 rounded-[12px] bg-blue-50 dark:bg-[#0F1523] border border-blue-200 dark:border-[#3B82F6]/20">
+                    <p className="text-[12px] font-medium text-blue-700 dark:text-[#93C5FD] mb-1 flex items-center gap-1"><MessageSquare className="h-3 w-3" />Notes from {getAssigneeName(detailTask)}</p>
+                    <p className="text-[13px] text-slate-700 dark:text-[#CBD5E1]">{detailTask.reviewNotes}</p>
                   </div>
                 )}
+
                 {/* Submission file */}
                 {detailTask.submissionFileUrl && (
-                  <div className="flex items-center justify-between p-3 rounded-[10px] bg-[#0F1523] border border-white/[0.06]">
-                    <div className="flex items-center gap-2 text-[13px] text-[#CBD5E1] min-w-0"><FileText className="h-4 w-4 text-[#93C5FD] flex-shrink-0" /><span className="truncate">{detailTask.submissionFileName || "Submission file"}</span></div>
+                  <div className="flex items-center justify-between p-3 rounded-[12px] bg-slate-50 dark:bg-[#0F1523] border border-slate-200 dark:border-white/[0.06]">
+                    <div className="flex items-center gap-2 text-[13px] text-slate-700 dark:text-[#CBD5E1] min-w-0"><FileText className="h-4 w-4 text-blue-600 dark:text-[#93C5FD] flex-shrink-0" /><span className="truncate">{detailTask.submissionFileName || "Submission file"}</span></div>
                     <TaskButtonGhost onClick={() => downloadFile(detailTask.submissionFileUrl, detailTask.submissionFileName || "file")}><Download className="h-3.5 w-3.5" />Open</TaskButtonGhost>
                   </div>
                 )}
                 {detailTask.reviewAssignerFileUrl && (
-                  <div className="flex items-center justify-between p-3 rounded-[10px] bg-[#0F1523] border border-[#F59E0B]/20">
-                    <div className="flex items-center gap-2 text-[13px] text-[#FBBF24] min-w-0"><FileText className="h-4 w-4 text-[#FBBF24] flex-shrink-0" /><span className="truncate">{detailTask.reviewAssignerFileName || "Attached file"}</span></div>
+                  <div className="flex items-center justify-between p-3 rounded-[12px] bg-amber-50 dark:bg-[#0F1523] border border-amber-200 dark:border-[#F59E0B]/20">
+                    <div className="flex items-center gap-2 text-[13px] text-amber-700 dark:text-[#FBBF24] min-w-0"><FileText className="h-4 w-4 text-amber-600 dark:text-[#FBBF24] flex-shrink-0" /><span className="truncate">{detailTask.reviewAssignerFileName || "Attached file"}</span></div>
                     <TaskButtonGhost onClick={() => downloadFile(detailTask.reviewAssignerFileUrl, detailTask.reviewAssignerFileName || "file")}><Download className="h-3.5 w-3.5" />Open</TaskButtonGhost>
                   </div>
                 )}
               </div>
-              <DialogFooter className="flex-col gap-2 sm:flex-row mt-2">
+
+              {/* Footer Actions */}
+              <div className="flex-shrink-0 border-t border-slate-200 dark:border-white/[0.06] pt-4 mt-2 flex items-center justify-end gap-3">
                 {canInteractWithTask(detailTask) && (
                   <>
-                {isAssignee(detailTask) && detailTask.isPhased && (() => {
-                  const nextIndex = getNextActionableIndex(milestones)
-                  const nextNotStarted = milestones.find((m: any) => m.status === "not_started" && m.order_index === nextIndex)
-                  const hasInProgress = milestones.some((m: any) => m.status === "in_progress")
-                  return (nextNotStarted && !hasInProgress) ? (
-                    <TaskButton onClick={() => handleStartTask(detailTask.id, detailTask.isPhased)}><Play className="h-4 w-4" />Start Milestone</TaskButton>
-                  ) : null
-                })()}
-                {detailTask.status === "todo" && isAssignee(detailTask) && !detailTask.isPhased && (
-                  <TaskButton onClick={() => handleStartTask(detailTask.id)}><Play className="h-4 w-4" />Start Task</TaskButton>
-                )}
-                {detailTask.status === "pending_review" && isAssigner(detailTask) && !detailTask.isPhased && (
-                  <TaskButton variant="primary-amber" onClick={() => { setAssignerReviewTask(detailTask); setAssignerProgress(detailTask.progress); setAssignerNotes(""); setAssignerFile(null); setAssignerAction("review"); setAssignerReviewOpen(true); setDetailDialogOpen(false) }}><MessageSquare className="h-4 w-4" />Review Progress</TaskButton>
-                )}
-                {detailTask.status === "pending_completion_review" && isAssigner(detailTask) && (
-                  <div className="flex gap-2 w-full">
-                    <TaskButton variant="secondary" onClick={() => { setAssignerReviewTask(detailTask); setAssignerNotes(""); setAssignerFile(null); setAssignerAction("reject"); setAssignerReviewOpen(true); setDetailDialogOpen(false) }}>Reject</TaskButton>
-                    <TaskButton variant="primary-purple" onClick={() => { setAssignerReviewTask(detailTask); setAssignerNotes(""); setAssignerFile(null); setAssignerAction("approve"); setAssignerReviewOpen(true); setDetailDialogOpen(false) }}><CheckCircle className="h-4 w-4" />Approve & Complete</TaskButton>
-                  </div>
-                )}
-                {isAssigner(detailTask) && (detailTask.status === "todo" || detailTask.status === "completed") && (
-                  <TaskButton variant="secondary" onClick={() => { handleArchiveTask(detailTask.id); setDetailDialogOpen(false) }}>
-                    Archive Task
-                  </TaskButton>
-                )}
+                    {isAssignee(detailTask) && detailTask.isPhased && (() => {
+                      const nextIndex = getNextActionableIndex(milestones)
+                      const nextNotStarted = milestones.find((m: any) => m.status === "not_started" && m.order_index === nextIndex)
+                      const hasInProgress = milestones.some((m: any) => m.status === "in_progress")
+                      return (nextNotStarted && !hasInProgress) ? (
+                        <TaskButton onClick={() => handleStartTask(detailTask.id, detailTask.isPhased)}><Play className="h-4 w-4" />Start Milestone</TaskButton>
+                      ) : null
+                    })()}
+                    {detailTask.status === "todo" && isAssignee(detailTask) && !detailTask.isPhased && (
+                      <TaskButton onClick={() => handleStartTask(detailTask.id)}><Play className="h-4 w-4" />Start Task</TaskButton>
+                    )}
+                    {detailTask.status === "pending_review" && isAssigner(detailTask) && !detailTask.isPhased && (
+                      <TaskButton variant="primary-amber" onClick={() => { setAssignerReviewTask(detailTask); setAssignerProgress(detailTask.progress); setAssignerNotes(""); setAssignerFile(null); setAssignerAction("review"); setAssignerReviewOpen(true); setDetailDialogOpen(false) }}><MessageSquare className="h-4 w-4" />Review Progress</TaskButton>
+                    )}
+                    {detailTask.status === "pending_completion_review" && isAssigner(detailTask) && (
+                      <div className="flex gap-2">
+                        <TaskButton variant="secondary" onClick={() => { setAssignerReviewTask(detailTask); setAssignerNotes(""); setAssignerFile(null); setAssignerAction("reject"); setAssignerReviewOpen(true); setDetailDialogOpen(false) }}>Reject</TaskButton>
+                        <TaskButton variant="primary-purple" onClick={() => { setAssignerReviewTask(detailTask); setAssignerNotes(""); setAssignerFile(null); setAssignerAction("approve"); setAssignerReviewOpen(true); setDetailDialogOpen(false) }}><CheckCircle className="h-4 w-4" />Approve & Complete</TaskButton>
+                      </div>
+                    )}
+                    {isAssigner(detailTask) && (detailTask.status === "todo" || detailTask.status === "completed") && (
+                      <button
+                        type="button"
+                        onClick={() => { handleArchiveTask(detailTask.id); setDetailDialogOpen(false) }}
+                        className="px-4 py-2 text-[13px] font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-[#1E293B] hover:bg-slate-200 dark:hover:bg-slate-700 rounded-[8px] border border-slate-300 dark:border-white/10 transition-colors"
+                      >
+                        Archive Task
+                      </button>
+                    )}
                   </>
                 )}
-                <TaskButton variant="secondary" onClick={() => setDetailDialogOpen(false)}>Close</TaskButton>
-              </DialogFooter>
+                <button
+                  type="button"
+                  onClick={() => setDetailDialogOpen(false)}
+                  className="px-4 py-2 text-[13px] font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-[#1E293B] hover:bg-slate-200 dark:hover:bg-slate-700 rounded-[8px] border border-slate-300 dark:border-white/10 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </>
           )}
         </DialogContent>
       </Dialog>
 
       {/* ===== MILESTONE REVIEW DIALOG ===== */}
-      <Dialog open={milestoneDialogOpen} onOpenChange={(open) => { if (!open) { setMilestoneDialogOpen(false); setMilestoneFile(null) } }}>
-        <DialogContent className="sm:max-w-[440px] bg-[#121826] border-white/[0.06] text-[#F1F5F9] rounded-[14px]">
-          <DialogHeader>
-            <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">{milestoneAction === "submit" ? "Submit Milestone for Review" : milestoneAction === "approve" ? "Approve Milestone" : "Reject Milestone"}</DialogTitle>
-            <DialogDescription className="text-[13px] text-[#64748B]">{milestoneAction === "submit" ? "Attach a supporting document (required) and an optional comment." : milestoneAction === "approve" ? "Confirm approval for this milestone." : "Send the milestone back with feedback."}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {milestoneAction !== "submit" && (() => {
-              const currentMilestone = milestones.find(m => m.id === milestoneDialogId)
-              const review = currentMilestone?.latestReview
-              if (!review || (!review.comment && !review.employee_file_url)) return null
-              return (
-                <div className="rounded-[10px] bg-[#0F1523] border border-white/[0.06] p-3 space-y-3">
-                  <h4 className="text-[12px] font-medium text-[#94A3B8] uppercase tracking-wider">Assignee's Submission</h4>
-                  {review.comment && (
-                    <div className="text-[13px] text-[#F1F5F9] bg-white/[0.02] p-2.5 rounded-[8px] border border-white/[0.04]">
-                      {review.comment}
-                    </div>
-                  )}
-                  {review.employee_file_url && (
-                    <div className="flex items-center justify-between p-2.5 rounded-[8px] bg-[#3B82F6]/[0.06] border border-[#3B82F6]/20">
-                      <div className="flex items-center gap-2 text-[13px] text-[#93C5FD] min-w-0">
-                        <FileText className="h-4 w-4 flex-shrink-0" />
-                        <span className="truncate font-medium">{review.employee_file_name || "Submission file"}</span>
+      <Dialog open={milestoneDialogOpen} onOpenChange={(open) => { if (!open) { setMilestoneDialogOpen(false); setMilestoneFile(null); setActiveMilestoneReviewData(null); } }}>
+        <DialogContent className="sm:max-w-[480px] max-h-[88vh] bg-white dark:bg-[#121826] border-slate-200 dark:border-white/[0.06] text-slate-900 dark:text-[#F1F5F9] rounded-[18px] shadow-2xl flex flex-col overflow-hidden p-6">
+          {(() => {
+            const currentMilestone = activeMilestoneReviewData || milestones.find(m => m.id === milestoneDialogId)
+            const milestoneTitle = currentMilestone?.title || "milestone"
+            const assigneeName = detailTask ? getAssigneeName(detailTask) : "assignee"
+
+            return (
+              <>
+                {/* Header */}
+                <div className="flex-shrink-0 pb-2">
+                  <DialogHeader>
+                    <DialogTitle className="text-[20px] font-bold text-slate-900 dark:text-[#F1F5F9]">
+                      {milestoneAction === "submit" ? "Submit Milestone for Review" : milestoneAction === "approve" ? "Approve Milestone" : "Reject Milestone"}
+                    </DialogTitle>
+                    <DialogDescription className="text-[13px] text-slate-500 dark:text-[#64748B]">
+                      {milestoneAction === "submit"
+                        ? "Attach a supporting document (required) and an optional comment."
+                        : milestoneAction === "approve"
+                        ? "Confirm approval for this milestone."
+                        : `Send ${milestoneTitle} back to ${assigneeName} with feedback.`}
+                    </DialogDescription>
+                  </DialogHeader>
+                </div>
+
+                {/* Body Content */}
+                <div className="flex-1 min-h-0 min-w-0 overflow-y-auto space-y-4 py-2 px-1.5">
+                  {/* Assignee's Submission Section */}
+                  {milestoneAction !== "submit" && (() => {
+                    const review = currentMilestone?.latestReview
+                    if (!review || (!review.comment && !review.employee_file_url)) return null
+                    return (
+                      <div className="rounded-xl bg-slate-50 dark:bg-[#0B0F1A]/80 border border-slate-200 dark:border-white/[0.06] p-3.5 space-y-3">
+                        <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                          ASSIGNEE'S SUBMISSION
+                        </h4>
+                        {review.comment && (
+                          <div className="text-[14px] text-slate-900 dark:text-[#F1F5F9] bg-white dark:bg-[#121826] p-3 rounded-lg border border-slate-200 dark:border-white/[0.06]">
+                            {review.comment}
+                          </div>
+                        )}
+                        {review.employee_file_url && (
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50/50 dark:bg-[#3B82F6]/[0.08] border border-blue-200 dark:border-[#3B82F6]/20 text-[13px]">
+                            <div className="flex items-center gap-2 text-blue-700 dark:text-[#93C5FD] min-w-0">
+                              <FileText className="h-4 w-4 flex-shrink-0" />
+                              <span className="truncate font-medium">{review.employee_file_name || "Submission file"}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => downloadFile(review.employee_file_url!, review.employee_file_name || "file")}
+                              className="inline-flex items-center gap-1 px-3 py-1 text-[12px] font-semibold text-blue-700 dark:text-[#93C5FD] bg-blue-100 dark:bg-[#3B82F6]/20 hover:bg-blue-200 dark:hover:bg-[#3B82F6]/30 rounded-lg border border-blue-300 dark:border-[#3B82F6]/30 transition-colors flex-shrink-0"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              Open
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <TaskButtonGhost onClick={() => downloadFile(review.employee_file_url!, review.employee_file_name || "file")} className="h-7 px-2 text-[#93C5FD] bg-[#3B82F6]/10 hover:bg-[#3B82F6]/20"><Download className="h-3.5 w-3.5 mr-1" />Open</TaskButtonGhost>
-                    </div>
+                    )
+                  })()}
+
+                  {/* Comment Input Section */}
+                  <div className="grid gap-1.5">
+                    {milestoneAction === "reject" ? (
+                      <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-[#CBD5E1]">
+                        COMMENT <span className="text-red-500 dark:text-[#F87171] font-bold">― REQUIRED</span>
+                      </Label>
+                    ) : (
+                      <Label className="text-[13px] font-medium text-slate-700 dark:text-[#CBD5E1]">Comment</Label>
+                    )}
+                    <Textarea
+                      value={milestoneComment}
+                      onChange={(e) => setMilestoneComment(e.target.value)}
+                      placeholder={milestoneAction === "approve" ? "Approval notes..." : milestoneAction === "reject" ? "What needs to be fixed..." : "What I've completed..."}
+                      rows={3.5}
+                      className="bg-slate-50 dark:bg-[#0B0F1A] border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-[#F1F5F9] placeholder:text-slate-400 dark:placeholder:text-[#475569] rounded-[10px] text-[14px] p-3"
+                    />
+                  </div>
+
+                  {/* Drag & Drop File Zone */}
+                  <FileDropZone tint={milestoneAction === "submit" ? "blue" : "neutral"} required={milestoneAction === "submit"} file={milestoneFile} onChange={setMilestoneFile} />
+                </div>
+
+                {/* Footer Action Bar */}
+                <div className="flex-shrink-0 border-t border-slate-200 dark:border-white/[0.06] pt-4 mt-2 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setMilestoneDialogOpen(false)}
+                    className="px-5 py-2 text-[13px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-[#1E293B] hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-300 dark:border-white/10 transition-colors"
+                  >
+                    Cancel
+                  </button>
+
+                  {milestoneAction === "submit" && (
+                    <button
+                      type="button"
+                      onClick={handleSubmitMilestoneReview}
+                      disabled={isMilestoneSubmitting}
+                      className="inline-flex items-center gap-1.5 px-5 py-2 text-[13px] font-bold text-white bg-[#3B82F6] hover:bg-[#2563EB] disabled:opacity-40 rounded-lg shadow transition-colors"
+                    >
+                      {isMilestoneSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      Submit for Review
+                    </button>
+                  )}
+
+                  {milestoneAction === "approve" && (
+                    <button
+                      type="button"
+                      onClick={handleApproveMilestone}
+                      disabled={isMilestoneSubmitting}
+                      className="inline-flex items-center gap-1.5 px-5 py-2 text-[13px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 rounded-lg shadow transition-colors"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Approve Milestone
+                    </button>
+                  )}
+
+                  {milestoneAction === "reject" && (
+                    <button
+                      type="button"
+                      onClick={handleRejectMilestone}
+                      disabled={isMilestoneSubmitting || !milestoneComment.trim()}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-bold text-red-700 dark:text-[#FCA5A5] bg-red-100 dark:bg-[#3B1719] hover:bg-red-200 dark:hover:bg-[#4D1F22] disabled:opacity-40 disabled:pointer-events-none rounded-lg border border-red-200 dark:border-red-900/50 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                      Reject & Return
+                    </button>
                   )}
                 </div>
-              )
-            })()}
-            <div className="grid gap-1.5"><Label className="text-[13px] text-[#CBD5E1]">Comment</Label><Textarea value={milestoneComment} onChange={(e) => setMilestoneComment(e.target.value)} placeholder={milestoneAction === "approve" ? "Approval notes..." : milestoneAction === "reject" ? "What needs to be fixed..." : "What I've completed..."} rows={3} className="bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px] text-[14px]" /></div>
-            <FileDropZone tint={milestoneAction === "submit" ? "blue" : "neutral"} required={milestoneAction === "submit"} file={milestoneFile} onChange={setMilestoneFile} />
-          </div>
-          <DialogFooter className="gap-2 mt-2">
-            <TaskButton variant="secondary" onClick={() => setMilestoneDialogOpen(false)}>Cancel</TaskButton>
-            {milestoneAction === "submit" && (<TaskButton onClick={handleSubmitMilestoneReview} disabled={isMilestoneSubmitting}>{isMilestoneSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Submit for Review</TaskButton>)}
-            {milestoneAction === "approve" && (<TaskButton onClick={handleApproveMilestone} disabled={isMilestoneSubmitting}><CheckCircle className="h-4 w-4" />Approve Milestone</TaskButton>)}
-            {milestoneAction === "reject" && (<TaskButton variant="secondary" onClick={handleRejectMilestone} disabled={isMilestoneSubmitting || !milestoneComment.trim()}>Reject & Return</TaskButton>)}
-          </DialogFooter>
+              </>
+            )
+          })()}
         </DialogContent>
       </Dialog>
 
       {/* ===== MANAGE MILESTONES DIALOG ===== */}
       <Dialog open={manageMilestonesOpen} onOpenChange={(open) => { if (!open) { setManageMilestonesOpen(false); setEditingMilestone(null); setNewMilestoneTitle(""); setNewMilestoneDescription(""); setNewMilestoneDueDate(""); setNewMilestoneDueTime("") } }}>
-        <DialogContent className="sm:max-w-[520px] max-h-[80vh] overflow-y-auto bg-[#121826] border-white/[0.06] text-[#F1F5F9] rounded-[14px]">
-          <DialogHeader>
-            <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">Manage Milestones</DialogTitle>
-            <DialogDescription className="text-[13px] text-[#64748B]">Add, edit, reorder, or remove milestones for "{detailTask?.title}".</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
+        <DialogContent className="sm:max-w-[540px] max-h-[88vh] bg-white dark:bg-[#121826] border-slate-200 dark:border-white/[0.06] text-slate-900 dark:text-[#F1F5F9] rounded-[18px] shadow-2xl flex flex-col overflow-hidden p-6">
+          {/* Header */}
+          <div className="flex-shrink-0 pb-2">
+            <DialogHeader>
+              <DialogTitle className="text-[20px] font-bold text-slate-900 dark:text-[#F1F5F9]">
+                Manage Milestones
+              </DialogTitle>
+              <DialogDescription className="text-[13px] text-slate-500 dark:text-[#64748B]">
+                Add, edit, reorder, or remove milestones for "{detailTask?.title}".
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          {/* Body Content */}
+          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto space-y-4 py-2 px-1.5">
+            {/* Existing Milestone Items List */}
             {milestoneListForManage.length > 0 && (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {milestoneListForManage.map((m: any, i: number) => (
-                  <div key={m.id} className="flex items-center gap-2 p-2.5 rounded-[10px] border border-white/[0.06] bg-[#0F1523]">
-                    <span className="text-[11px] font-bold text-[#64748B] w-5 flex-shrink-0">{i + 1}</span>
-                    <span className="flex-1 text-[13px] text-[#CBD5E1] truncate">{m.title}</span>
+                  <div key={m.id} className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0B0F1A] transition-colors">
+                    <div className="w-6 h-6 rounded-full bg-[#3B82F6] text-white flex items-center justify-center text-[12px] font-bold flex-shrink-0">
+                      {i + 1}
+                    </div>
+                    <span className="flex-1 text-[14px] font-bold text-slate-900 dark:text-white truncate min-w-0">
+                      {m.title}
+                    </span>
                     <MilestoneStatusBadge status={m.status} />
-                    <button type="button" disabled={i === 0} onClick={() => moveMilestone(i, -1)} className="p-1 rounded-[8px] text-[#64748B] hover:text-[#CBD5E1] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none"><ChevronDown className="h-3.5 w-3.5 rotate-180" /></button>
-                    <button type="button" disabled={i === milestoneListForManage.length - 1} onClick={() => moveMilestone(i, 1)} className="p-1 rounded-[8px] text-[#64748B] hover:text-[#CBD5E1] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none"><ChevronDown className="h-3.5 w-3.5" /></button>
-                    <button type="button" onClick={() => {
-                      const existingDate = m.due_datetime ? new Date(m.due_datetime).toISOString().split('T')[0] : ""
-                      const existingTime = m.due_datetime ? new Date(m.due_datetime).toTimeString().slice(0, 5) : ""
-                      setEditingMilestone({ ...m, dueDate: existingDate, dueTime: existingTime })
-                    }} className="px-2 py-1 rounded-[8px] text-[12px] font-medium text-[#94A3B8] hover:text-[#CBD5E1] hover:bg-white/[0.06]">Edit</button>
-                    <button type="button" onClick={() => handleDeleteMilestone(m.id)} className="p-1 rounded-[8px] text-[#64748B] hover:text-[#EF4444] hover:bg-white/[0.06]"><X className="h-3.5 w-3.5" /></button>
+
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-1">
+                      <button
+                        type="button"
+                        disabled={i === 0}
+                        onClick={() => moveMilestone(i, -1)}
+                        className="p-1 rounded-[6px] text-slate-400 dark:text-[#64748B] hover:text-slate-700 dark:hover:text-[#CBD5E1] hover:bg-slate-200 dark:hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                      >
+                        <ChevronDown className="h-3.5 w-3.5 rotate-180" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={i === milestoneListForManage.length - 1}
+                        onClick={() => moveMilestone(i, 1)}
+                        className="p-1 rounded-[6px] text-slate-400 dark:text-[#64748B] hover:text-slate-700 dark:hover:text-[#CBD5E1] hover:bg-slate-200 dark:hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                      >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+
+                      <span className="h-4 border-r border-slate-300 dark:border-white/10 mx-1 flex-shrink-0" />
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const existingDate = m.due_datetime ? new Date(m.due_datetime).toISOString().split('T')[0] : (m.due_date ? new Date(m.due_date).toISOString().split('T')[0] : "")
+                          const existingTime = m.due_datetime ? new Date(m.due_datetime).toTimeString().slice(0, 5) : (m.due_date ? new Date(m.due_date).toTimeString().slice(0, 5) : "")
+                          setEditingMilestone({ ...m, dueDate: existingDate, dueTime: existingTime })
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-[6px] text-[12px] font-medium text-slate-700 dark:text-[#CBD5E1] hover:text-[#3B82F6] hover:bg-slate-200 dark:hover:bg-white/[0.06] transition-colors"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMilestone(m.id)}
+                        className="p-1.5 rounded-[6px] text-slate-400 dark:text-[#64748B] hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
-            <div className="flex items-center gap-2">
-              <Input placeholder="New milestone title" value={newMilestoneTitle} onChange={(e) => setNewMilestoneTitle(e.target.value)} className="h-9 text-[13px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px]" />
-              <TaskButton onClick={handleAddMilestoneMidTask} disabled={!newMilestoneTitle.trim() || !newMilestoneDescription.trim() || !newMilestoneDueDate || !newMilestoneDueTime}><Plus className="h-3.5 w-3.5" />Add Milestone</TaskButton>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <Input placeholder="Description" value={newMilestoneDescription} onChange={(e) => setNewMilestoneDescription(e.target.value)} className="h-9 text-[13px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] placeholder:text-[#475569] rounded-[10px]" />
-              <Input 
-                type="date" 
-                min={todayStr}
-                value={newMilestoneDueDate} 
-                onChange={(e) => { setNewMilestoneDueDate(e.target.value); setNewMilestoneDueTime("") }} 
-                className="h-9 text-[13px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] color-scheme-dark" 
+
+            {/* + NEW MILESTONE Section Card */}
+            <div className="rounded-xl border border-dashed border-slate-300 dark:border-white/15 bg-slate-50/50 dark:bg-[#0F1523]/40 p-4 space-y-3.5">
+              <div className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                <Plus className="h-3.5 w-3.5 text-[#3B82F6]" />
+                <span>NEW MILESTONE</span>
+              </div>
+
+              {/* Title */}
+              <Input
+                placeholder="New milestone title"
+                value={newMilestoneTitle}
+                onChange={(e) => setNewMilestoneTitle(e.target.value)}
+                className="w-full h-10 text-[14px] bg-white dark:bg-[#0B0F1A] border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-[#F1F5F9] placeholder:text-slate-400 dark:placeholder:text-[#475569] rounded-[10px]"
               />
-              <Input 
-                type="time" 
-                min={newMilestoneDueDate === todayStr ? nowTimeStr : undefined}
-                value={newMilestoneDueTime} 
-                onChange={(e) => setNewMilestoneDueTime(e.target.value)} 
-                className="h-9 text-[13px] bg-[#0B0F1A] border-white/[0.08] text-[#F1F5F9] rounded-[10px] color-scheme-dark" 
+
+              {/* Description */}
+              <Textarea
+                placeholder="Description"
+                value={newMilestoneDescription}
+                onChange={(e) => setNewMilestoneDescription(e.target.value)}
+                rows={2.5}
+                className="w-full text-[14px] bg-white dark:bg-[#0B0F1A] border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-[#F1F5F9] placeholder:text-slate-400 dark:placeholder:text-[#475569] rounded-[10px] p-3"
               />
+
+              {/* Date & Time Pickers */}
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  type="date"
+                  min={todayStr}
+                  value={newMilestoneDueDate}
+                  onChange={(e) => { setNewMilestoneDueDate(e.target.value); setNewMilestoneDueTime("") }}
+                  className="h-10 text-[14px] bg-white dark:bg-[#0B0F1A] border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-[#F1F5F9] rounded-[10px] color-scheme-dark"
+                />
+                <Input
+                  type="time"
+                  min={newMilestoneDueDate === todayStr ? nowTimeStr : undefined}
+                  value={newMilestoneDueTime}
+                  onChange={(e) => setNewMilestoneDueTime(e.target.value)}
+                  className="h-10 text-[14px] bg-white dark:bg-[#0B0F1A] border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-[#F1F5F9] rounded-[10px] color-scheme-dark"
+                />
+              </div>
+
+              {/* Subtitle & Add Button */}
+              <div className="flex items-center justify-between pt-1">
+                <p className="text-[12px] text-slate-500 dark:text-[#64748B]">
+                  Fill in all fields above, then click "Add Milestone" to add it to the list.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleAddMilestoneMidTask}
+                  disabled={!newMilestoneTitle.trim() || !newMilestoneDescription.trim() || !newMilestoneDueDate || !newMilestoneDueTime}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-bold text-white bg-[#3B82F6] hover:bg-[#2563EB] disabled:opacity-40 disabled:pointer-events-none rounded-lg shadow transition-colors ml-auto flex-shrink-0"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Milestone
+                </button>
+              </div>
             </div>
-            <p className="text-[11px] text-[#475569]">Fill in all fields above, then click "Add Milestone" to add it to the list.</p>
-            {milestoneListForManage.length === 0 && (<p className="text-[13px] text-[#64748B] text-center py-4">No milestones yet. Add one to get started.</p>)}
+
+            {milestoneListForManage.length === 0 && (
+              <p className="text-[13px] text-slate-500 dark:text-[#64748B] text-center py-2">No milestones yet. Add one above to get started.</p>
+            )}
           </div>
-          <DialogFooter className="mt-2"><TaskButton variant="secondary" onClick={() => { setManageMilestonesOpen(false); setEditingMilestone(null); setNewMilestoneTitle(""); setNewMilestoneDescription(""); setNewMilestoneDueDate(""); setNewMilestoneDueTime("") }}>Done</TaskButton></DialogFooter>
+
+          {/* Footer Action */}
+          <div className="flex-shrink-0 border-t border-slate-200 dark:border-white/[0.06] pt-4 mt-2 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => { setManageMilestonesOpen(false); setEditingMilestone(null); setNewMilestoneTitle(""); setNewMilestoneDescription(""); setNewMilestoneDueDate(""); setNewMilestoneDueTime("") }}
+              className="px-6 py-2 text-[13px] font-bold text-white bg-[#3B82F6] hover:bg-[#2563EB] rounded-lg shadow transition-colors"
+            >
+              Done
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -1508,13 +2264,13 @@ export default function TasksPage() {
           <DialogHeader>
             <DialogTitle className="text-[17px] font-medium text-[#F1F5F9]">
               {assignerAction === "review" ? "Review Progress"
-               : assignerAction === "approve" ? "Approve Completion"
-               : "Reject & Return Task"}
+                : assignerAction === "approve" ? "Approve Completion"
+                  : "Reject & Return Task"}
             </DialogTitle>
             <DialogDescription className="text-[13px] text-[#64748B]">
               {assignerAction === "review" ? "Set the actual progress percentage and leave feedback."
-               : assignerAction === "approve" ? "Attach an optional file and confirm your approval."
-               : "Provide feedback explaining what needs to be revised."}
+                : assignerAction === "approve" ? "Attach an optional file and confirm your approval."
+                  : "Provide feedback explaining what needs to be revised."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2 min-w-0">
@@ -1552,6 +2308,91 @@ export default function TasksPage() {
               <TaskButton variant="secondary" onClick={() => handleRejectCompletion(assignerReviewTask!.id)} disabled={isUpdatingTask || !assignerNotes.trim()}>Reject & Return</TaskButton>
             )}
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== ASSIGNER'S REVIEW DIALOG ===== */}
+      <Dialog open={!!viewingReviewMilestone} onOpenChange={(open) => { if (!open) setViewingReviewMilestone(null) }}>
+        <DialogContent className="sm:max-w-[480px] max-h-[88vh] bg-white dark:bg-[#121826] border-slate-200 dark:border-white/[0.06] text-slate-900 dark:text-[#F1F5F9] rounded-[18px] shadow-2xl flex flex-col overflow-hidden p-6">
+          <div className="flex-shrink-0 pb-2">
+            <DialogHeader>
+              <DialogTitle className="text-[20px] font-bold text-slate-900 dark:text-[#F1F5F9]">
+                Assigner's Review
+              </DialogTitle>
+              <DialogDescription className="text-[13px] text-slate-500 dark:text-[#64748B]">
+                Reviewer feedback and attached file for "{viewingReviewMilestone?.title}".
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto space-y-4 py-2 px-1.5">
+            {/* Status / Decision Pill */}
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                Decision:
+              </span>
+              {viewingReviewMilestone?.latestReview?.decision === "approved" || viewingReviewMilestone?.status === "approved" ? (
+                <span className="px-3 py-1 rounded-full text-[12px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  Approved
+                </span>
+              ) : viewingReviewMilestone?.latestReview?.decision === "rejected" ? (
+                <span className="px-3 py-1 rounded-full text-[12px] font-bold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                  Rejected / Returned for Revision
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-full text-[12px] font-bold bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300">
+                  Reviewed
+                </span>
+              )}
+            </div>
+
+            {/* Reviewer Comment */}
+            {viewingReviewMilestone?.latestReview?.comment ? (
+              <div className="grid gap-1.5">
+                <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                  Reviewer Comment
+                </Label>
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0B0F1A] border border-slate-200 dark:border-white/[0.06] text-[14px] text-slate-900 dark:text-[#F1F5F9] leading-relaxed whitespace-pre-wrap">
+                  {viewingReviewMilestone.latestReview.comment}
+                </div>
+              </div>
+            ) : (
+              <p className="text-[13px] text-slate-500 dark:text-slate-400 italic">No comment provided by reviewer.</p>
+            )}
+
+            {/* Reviewer Attachment & Download Button */}
+            {viewingReviewMilestone?.latestReview?.reviewer_file_url && (
+              <div className="grid gap-1.5">
+                <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                  Reviewer Attachment
+                </Label>
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-amber-50/50 dark:bg-[#F59E0B]/[0.08] border border-amber-200 dark:border-[#F59E0B]/20 text-[13px]">
+                  <div className="flex items-center gap-2 text-amber-800 dark:text-[#FBBF24] min-w-0">
+                    <FileText className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate font-medium">{viewingReviewMilestone.latestReview.reviewer_file_name || "Reviewer attached file"}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => downloadFile(viewingReviewMilestone.latestReview.reviewer_file_url, viewingReviewMilestone.latestReview.reviewer_file_name || "file")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold text-amber-700 dark:text-[#FBBF24] bg-amber-100 dark:bg-[#F59E0B]/20 hover:bg-amber-200 dark:hover:bg-[#F59E0B]/30 rounded-lg border border-amber-300 dark:border-[#F59E0B]/30 transition-colors flex-shrink-0"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex-shrink-0 border-t border-slate-200 dark:border-white/[0.06] pt-4 mt-2 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setViewingReviewMilestone(null)}
+              className="px-5 py-2 text-[13px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-[#1E293B] hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-300 dark:border-white/10 transition-colors"
+            >
+              Close
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -1517,6 +1517,48 @@ export const tasksAPI = {
     return { reordered: true }
   },
 
+  toggleLateSubmissionMilestone: async (milestoneId: string, allow: boolean) => {
+    const { data, error } = await supabase
+      .from("task_milestones")
+      .update({ allow_late_submission: allow, submission_open: allow, updated_at: new Date().toISOString() })
+      .eq("id", milestoneId)
+      .select()
+      .single()
+    if (error) {
+      const { data: d2, error: err2 } = await supabase
+        .from("task_milestones")
+        .update({ submission_open: allow, updated_at: new Date().toISOString() })
+        .eq("id", milestoneId)
+        .select()
+        .single()
+      if (err2) throw err2
+      return d2
+    }
+    return data
+  },
+
+  toggleMilestoneSubmission: async (milestoneId: string, open: boolean) => {
+    const { data, error } = await supabase
+      .from("task_milestones")
+      .update({ submission_open: open, allow_late_submission: open, updated_at: new Date().toISOString() })
+      .eq("id", milestoneId)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  toggleLateSubmissionTask: async (taskId: string, allow: boolean) => {
+    const { data, error } = await supabase
+      .from("tasks")
+      .update({ allow_late_submission: allow, updated_at: new Date().toISOString() })
+      .eq("id", taskId)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
   getMilestoneSummaries: async (taskIds: string[]): Promise<Record<string, { total: number; approved: number }>> => {
     if (!taskIds.length) return {}
     const { data, error } = await supabase
